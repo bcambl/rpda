@@ -22,7 +22,7 @@ func main() {
 	a := &App{}
 	a.readConfig("settings.json")
 
-	validTasks := []string{"display", "enable", "disable"}
+	validTasks := []string{"list", "display", "enable", "disable"}
 	taskPtr := flag.String("task", "",
 		"Task to perform. Valid Options: "+strings.Join(validTasks, ", "))
 
@@ -31,12 +31,12 @@ func main() {
 
 	validCopies := []string{"dr", "test"}
 	copyPtr := flag.String("copy", "",
-		"Copy to enable. Valid Options: "+strings.Join(validCopies, ", "))
+		"Copy Node to enable. Valid Options: "+strings.Join(validCopies, ", "))
 
 	allPtr := flag.Bool("all", false,
 		"Operate on all consistency groups which user has permissions")
 
-	delayPtr := flag.Int("delay", 3,
+	delayPtr := flag.Int("delay", 0,
 		"Delay to wait when operating on multiple groups")
 
 	debugPtr := flag.Bool("debug", false,
@@ -59,7 +59,7 @@ func main() {
 	// Validate Copy
 	valid = validValue(*copyPtr, validCopies)
 	// copy is not required to perform a display
-	if !valid && a.Task != "display" {
+	if !valid && a.Task != "display" && a.Task != "list" {
 		fmt.Printf("\nPlease provide a valid Copy. "+
 			"(See: -help)\nOptions: %s\n\n",
 			strings.Join(validCopies, ", "))
@@ -76,7 +76,7 @@ func main() {
 	}
 
 	if *groupPtr == "" {
-		if !a.All {
+		if !a.All && a.Task != "list" {
 			fmt.Printf("\nPlease provide a Consistency Group Name. " +
 				"(See: -help)\n")
 			os.Exit(1)

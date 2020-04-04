@@ -34,7 +34,7 @@ func (a *App) readConfig(configFile string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Println("Please Update Configuration File: " + configFile)
+		fmt.Println("Please Update Configuration File: " + configFile)
 		os.Exit(0)
 	}
 	config, err := ioutil.ReadFile(configFile)
@@ -206,6 +206,14 @@ func (a *App) sortGroupCopies(gcs []GroupCopiesSettings) []GroupCopiesSettings {
 	return sortedCopiesSettings
 }
 
+func (a *App) listGroups() {
+	groups := a.getAllGroups()
+	for _, g := range groups {
+		name := a.getGroupName(g.ID)
+		fmt.Println(name) // consisntency group name
+	}
+}
+
 func (a *App) displayAllGroups() {
 	groups := a.getAllGroups()
 	for _, g := range groups {
@@ -233,8 +241,49 @@ func (a *App) displayGroup(groupName string) {
 	}
 }
 
+func (a *App) startTransfer() {
+	fmt.Printf("start transfer")
+}
+
+func (a *App) imageAccess(enable bool) {
+	operation := "disable_image_access"
+	if enable {
+		operation = "image_access/latest/enable"
+	}
+	fmt.Printf(operation)
+}
+
+func (a *App) directAccess(enable bool) {
+	operation := "disable_image_access"
+	if enable {
+		operation = "enable_direct_access"
+	}
+	fmt.Printf(operation)
+}
+
+func (a *App) enableAll() {
+	fmt.Println("enable all to copy: ", a.Copy)
+}
+
+func (a *App) enableOne(group string) {
+	fmt.Printf("enable %s to copy: %s\n", group, a.Copy)
+}
+
+func (a *App) disableAll() {
+	fmt.Println("disable all to copy: ", a.Copy)
+}
+
+func (a *App) disableOne(group string) {
+	fmt.Printf("disable %s to copy: %s\n", group, a.Copy)
+}
+
 // Run is the Main application routine
 func (a *App) Run() {
+	if a.Task == "list" {
+		a.listGroups()
+		os.Exit(0)
+	}
+
 	if a.All {
 		fmt.Println("Operating on: All Consistency Groups")
 	} else {
