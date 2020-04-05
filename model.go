@@ -61,3 +61,7 @@ type User struct {
 	Name   string     `json:"name"`
 	Groups []GroupUID `json:"groups"`
 }
+
+type usageExampleData struct {
+	Bin string
+}

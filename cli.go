@@ -46,6 +46,11 @@ func main() {
 
 	flag.Parse()
 
+	if *examplesPtr {
+		a.usageExamples()
+		os.Exit(0)
+	}
+
 	// Validate Task
 	var valid bool
 	valid = validValue(*taskPtr, validTasks)
@@ -89,11 +94,6 @@ func main() {
 
 	if a.Debug {
 		a.debug()
-	}
-
-	if *examplesPtr {
-		a.usageExamples()
-		os.Exit(0)
 	}
 
 	a.Run()

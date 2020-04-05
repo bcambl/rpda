@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"text/template"
 	"time"
 )
 
@@ -46,28 +47,36 @@ func (a *App) readConfig(configFile string) {
 
 func (a *App) usageExamples() {
 	flag.Usage()
-	msg := `
+	examples := `
 CLI Examples:
 
 // Display status of Test1_CG:
-program -task=display -group=Test1_CG
+{{ .Bin }} -task=display -group=Test1_CG
 
 // Display status of All Consistency Groups:
-program -task=display -all
+{{ .Bin }} -task=display -all
 
 // Enable Direct Image Access Mode for Test Copy on Test1_CG
-program -task=enable -copy=TEST -group=Test1_CG 
+{{ .Bin }} -task=enable -copy=TEST -group=Test1_CG
 
 // Enable Direct Image Access Mode of Test Copy for All Consistency Groups
-program -task=enable -copy=TEST -all
+{{ .Bin }} -task=enable -copy=TEST -all
 
 // Disable Direct Image Access Mode of Test1_CG and Start Transfer
-program -task=disable -group=Test1_CG
+{{ .Bin }} -task=disable -group=Test1_CG
 
 // Disable Direct Image Access Mode of All CG's Start Transfer
-program -task=disable -all
+{{ .Bin }} -task=disable -all
 `
-	fmt.Println(msg)
+	d := usageExampleData{Bin: os.Args[0]}
+	// parse template
+	t := template.Must(template.New("usage_examples").Parse(examples))
+
+	// print template to stdout
+	err := t.Execute(os.Stdout, &d)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func (a *App) debug() {
