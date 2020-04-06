@@ -32,12 +32,12 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 
 import (
-	"bufio"
 	"fmt"
 	"os"
-	"strings"
+	"syscall"
 
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/spf13/cobra"
 
@@ -141,13 +141,15 @@ func passwordPrompt() {
 	// password _can_ be saved to the config file; however, prompt by default.
 	// consider this a hidden feature as passowrds should not be stored in in plain text.
 	if viper.Get("api.password") == nil {
-		r := bufio.NewReader(os.Stdin)
 		fmt.Printf("provide password for %s: ", viper.Get("api.username"))
-		p, err := r.ReadString('\n')
+
+		p, err := terminal.ReadPassword(int(syscall.Stdin))
 		if err != nil {
 			log.Fatal(err)
 		}
-		p = strings.TrimSpace(p)
+
 		viper.Set("api.password", p)
+
+		fmt.Println("")
 	}
 }
