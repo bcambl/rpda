@@ -1,5 +1,6 @@
 # compiled binary
 rpda
 
-#settings file (auto-generated)
-settings.json
+# site settings
+.rpda.yaml
+
