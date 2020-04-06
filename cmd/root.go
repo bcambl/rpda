@@ -34,9 +34,10 @@ POSSIBILITY OF SUCH DAMAGE.
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/cobra"
 

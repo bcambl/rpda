@@ -33,7 +33,8 @@ POSSIBILITY OF SUCH DAMAGE.
 
 import (
 	"fmt"
-	"log"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/bcambl/rpda/pkg/rpda"
 	"github.com/spf13/cobra"
