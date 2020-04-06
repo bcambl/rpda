@@ -36,7 +36,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bcambl/rpda/pkg/rpda"
+	"github.com/bcambl/rpda/internal/pkg/rpda"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
