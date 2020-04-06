@@ -1,4 +1,4 @@
-package main
+package rpa
 
 import (
 	"crypto/tls"
@@ -7,21 +7,13 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strings"
 	"text/template"
 	"time"
-)
 
-var (
-	// ProductionIdentifier is the Production Node Identifier
-	ProductionIdentifier = "_PN"
-	// CopyIdentifier is the Copy Copy Identifier
-	CopyIdentifier = "_CN"
-	// TestIdentifier is the Test Copy Identifier
-	TestIdentifier = "TC_"
+	log "github.com/sirupsen/logrus"
 )
 
 func (a *App) readConfig(configFile string) {
@@ -47,27 +39,34 @@ func (a *App) readConfig(configFile string) {
 
 func (a *App) usageExamples() {
 	flag.Usage()
+
 	examples := `
-CLI Examples:
+Package Examples:
+
+// List All Consistency Group Names:
+{{ .Bin }} list
 
 // Display status of Test1_CG:
-{{ .Bin }} -task=display -group=Test1_CG
+{{ .Bin }} status --group Test1_CG
 
 // Display status of All Consistency Groups:
-{{ .Bin }} -task=display -all
+{{ .Bin }} status --all
 
 // Enable Direct Image Access Mode for Test Copy on Test1_CG
-{{ .Bin }} -task=enable -copy=TEST -group=Test1_CG
+{{ .Bin }} start --group=Test1_CG --latest-test
 
 // Enable Direct Image Access Mode of Test Copy for All Consistency Groups
-{{ .Bin }} -task=enable -copy=TEST -all
+{{ .Bin }} start --all --latest-test
 
 // Disable Direct Image Access Mode of Test1_CG and Start Transfer
-{{ .Bin }} -task=disable -group=Test1_CG
+{{ .Bin }} finish --group=Test1_CG
 
 // Disable Direct Image Access Mode of All CG's Start Transfer
-{{ .Bin }} -task=disable -all
+{{ .Bin }} finish --all
 `
+	type usageExampleData struct {
+		Bin string
+	}
 	d := usageExampleData{Bin: os.Args[0]}
 	// parse template
 	t := template.Must(template.New("usage_examples").Parse(examples))
@@ -79,38 +78,21 @@ CLI Examples:
 	}
 }
 
-func (a *App) debug() {
-	// // Show all Group ID's
-	// groups := GetAllGroups()
-	// for _, g := range groups {
-	// 	name := GetGroupName(g.ID)
-	// 	fmt.Printf("%s: %d\n", name, g.ID)
-	// }
+// Debug will dump the
+func (a *App) Debug() {
 
-	// //Show Test1_CG
-	// copySettings := GetGroupCopiesSettings(1157507498)
-	// for _, cs := range copySettings {
-	// 	fmt.Println("Consistency Group Name: ", cs.Name)
-	// 	fmt.Println("GroupUID: ", cs.CopyUID.GroupUID.ID)
-	// 	fmt.Println("ClusterID: ", cs.CopyUID.GlobalCopyUID.ClusterUID.ID)
-	// 	fmt.Println("GlobalCopy CopyUID: ", cs.CopyUID.GlobalCopyUID.CopyUID)
-	// 	fmt.Println("Role: ", cs.RoleInfo.Role)
-	// 	fmt.Println("===")
-	// }
-
-	// DisplayAllGroups()
-	// DisplayGroup("Test1_CG")
 	fmt.Println("DEBUG ENABLED")
-	// debug out cli args
-	fmt.Println("RPA URL: ", a.RPA)
+	// print out App struct fields
+	fmt.Println("RPA URL: ", a.RPAURL)
 	fmt.Println("Username: ", a.Username)
-	fmt.Println("Task: ", a.Task)
+	fmt.Println("Password: ", a.Password)
 	fmt.Println("Group: ", a.Group)
 	fmt.Println("Copy: ", a.Copy)
-	fmt.Println("All: ", a.All)
 	fmt.Println("Delay: ", a.Delay)
-	fmt.Println("Debug: ", a.Debug)
-	fmt.Println("Uncaught Arguments: ", flag.Args())
+	fmt.Println("Identifiers:")
+	fmt.Println("  Production Node: ", a.Identifiers.ProductionNode)
+	fmt.Println("  Copy Node: ", a.Identifiers.CopyNode)
+	fmt.Println("  Test Copy: ", a.Identifiers.TestCopy)
 }
 
 func basicAuth(username, password string) string {
@@ -148,7 +130,7 @@ func (a *App) apiRequest(method, url string) ([]byte, int) {
 }
 
 func (a *App) getUserGroups() []GroupUID {
-	endpoint := a.RPA + "/fapi/rest/5_1/users/settings/"
+	endpoint := a.RPAURL + "/fapi/rest/5_1/users/settings/"
 	body, statusCode := a.apiRequest("GET", endpoint)
 	fmt.Println(statusCode)
 	var usr UsersSettingsResponse
@@ -164,7 +146,7 @@ func (a *App) getUserGroups() []GroupUID {
 }
 
 func (a *App) getAllGroups() []GroupUID {
-	endpoint := a.RPA + "/fapi/rest/5_1/groups/"
+	endpoint := a.RPAURL + "/fapi/rest/5_1/groups/"
 	body, _ := a.apiRequest("GET", endpoint)
 
 	var gResp GroupsResponse
@@ -173,7 +155,7 @@ func (a *App) getAllGroups() []GroupUID {
 }
 
 func (a *App) getGroupName(groupID int) string {
-	endpoint := fmt.Sprintf(a.RPA+"/fapi/rest/5_1/groups/%d/name/", groupID)
+	endpoint := fmt.Sprintf(a.RPAURL+"/fapi/rest/5_1/groups/%d/name/", groupID)
 	body, _ := a.apiRequest("GET", endpoint)
 
 	var groupName GroupName
@@ -182,7 +164,7 @@ func (a *App) getGroupName(groupID int) string {
 }
 
 func (a *App) getGroupCopiesSettings(groupID int) []GroupCopiesSettings {
-	endpoint := fmt.Sprintf(a.RPA+"/fapi/rest/5_1/groups/%d/settings/", groupID)
+	endpoint := fmt.Sprintf(a.RPAURL+"/fapi/rest/5_1/groups/%d/settings/", groupID)
 	body, _ := a.apiRequest("GET", endpoint)
 
 	var gsr GroupSettingsResponse
@@ -195,27 +177,28 @@ func (a *App) sortGroupCopies(gcs []GroupCopiesSettings) []GroupCopiesSettings {
 	var sortedCopiesSettings []GroupCopiesSettings
 	// Production should be index 0
 	for _, cs := range gcs {
-		if strings.Contains(cs.Name, ProductionIdentifier) {
+		if strings.Contains(cs.Name, a.Identifiers.ProductionNode) {
 			sortedCopiesSettings = append(sortedCopiesSettings, cs)
 		}
 	}
 	// Non-Production and Non-Test copies in the middle of the slice
 	for _, cs := range gcs {
-		if !strings.Contains(cs.Name, ProductionIdentifier) &&
-			!strings.Contains(cs.Name, TestIdentifier) {
+		if !strings.Contains(cs.Name, a.Identifiers.ProductionNode) &&
+			!strings.Contains(cs.Name, a.Identifiers.TestCopy) {
 			sortedCopiesSettings = append(sortedCopiesSettings, cs)
 		}
 	}
 	// Test copy should be last in slice
 	for _, cs := range gcs {
-		if strings.Contains(cs.Name, TestIdentifier) {
+		if strings.Contains(cs.Name, a.Identifiers.TestCopy) {
 			sortedCopiesSettings = append(sortedCopiesSettings, cs)
 		}
 	}
 	return sortedCopiesSettings
 }
 
-func (a *App) listGroups() {
+// ListGroups lists all consistency group names
+func (a *App) ListGroups() {
 	groups := a.getAllGroups()
 	for _, g := range groups {
 		name := a.getGroupName(g.ID)
@@ -223,7 +206,8 @@ func (a *App) listGroups() {
 	}
 }
 
-func (a *App) displayAllGroups() {
+// DisplayAllGroups displays the status of all consisntenct groups
+func (a *App) DisplayAllGroups() {
 	groups := a.getAllGroups()
 	for _, g := range groups {
 		name := a.getGroupName(g.ID)
@@ -235,7 +219,8 @@ func (a *App) displayAllGroups() {
 	}
 }
 
-func (a *App) displayGroup(groupName string) {
+// DisplayGroup displays the status of a consistency group by group name
+func (a *App) DisplayGroup(groupName string) {
 	groups := a.getAllGroups()
 	for _, g := range groups {
 		name := a.getGroupName(g.ID)
@@ -270,41 +255,22 @@ func (a *App) directAccess(enable bool) {
 	fmt.Printf(operation)
 }
 
-func (a *App) enableAll() {
+// StartAll wraper for enabling Direct Image Access for all CG
+func (a *App) StartAll() {
 	fmt.Println("enable all to copy: ", a.Copy)
 }
 
-func (a *App) enableOne(group string) {
-	fmt.Printf("enable %s to copy: %s\n", group, a.Copy)
+// StartOne wraper for enabling Direct Image Access for a single CG
+func (a *App) StartOne() {
+	fmt.Printf("enable %s to copy: %s\n", a.Group, a.Copy)
 }
 
-func (a *App) disableAll() {
+// FinishAll wraper for finishing Direct Image Access for all CG
+func (a *App) FinishAll() {
 	fmt.Println("disable all to copy: ", a.Copy)
 }
 
-func (a *App) disableOne(group string) {
-	fmt.Printf("disable %s to copy: %s\n", group, a.Copy)
-}
-
-// Run is the Main application routine
-func (a *App) Run() {
-	if a.Task == "list" {
-		a.listGroups()
-		os.Exit(0)
-	}
-
-	if a.All {
-		fmt.Println("Operating on: All Consistency Groups")
-	} else {
-		fmt.Println("Operating on Group: ", a.Group)
-	}
-
-	if a.Task == "display" {
-		if a.All {
-			a.displayAllGroups()
-			os.Exit(0)
-		}
-		a.displayGroup(a.Group)
-		os.Exit(0)
-	}
+// FinishOne wraper for finishing Direct Image Access for a single CG
+func (a *App) FinishOne() {
+	fmt.Printf("disable %s to copy: %s\n", a.Group, a.Copy)
 }
