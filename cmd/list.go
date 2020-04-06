@@ -41,7 +41,12 @@ import (
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all Consistency Group Names",
-	Long:  ``,
+	Long: `List all Consistency Group Names
+example:
+
+rpda list
+
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		a := &rpa.App{}

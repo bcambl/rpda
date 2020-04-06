@@ -45,9 +45,18 @@ import (
 // startCmd represents the start command
 var startCmd = &cobra.Command{
 	Use:   "start",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines
+	Short: "Enable direct access mode for the latest copy",
+	Long: `Enable direct access mode for the latest copy
 examples:
+
+rpda start --group EXAMPLE_CG --latest-test
+
+rpda start --group EXAMPLE_CG --latest-dr
+
+rpda start --all --latest-test
+
+rpda start --all --latest-dr
+
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
 

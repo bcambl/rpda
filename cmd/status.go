@@ -45,7 +45,14 @@ import (
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Display Consistency Group Status",
-	Long:  ``,
+	Long: `Display Consistency Group Status
+examples:
+
+rpda status --all
+
+rpda status --group Example_CG
+
+	`,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		a := &rpa.App{}

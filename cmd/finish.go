@@ -45,9 +45,14 @@ import (
 // finishCmd represents the finish command
 var finishCmd = &cobra.Command{
 	Use:   "finish",
-	Short: "A brief description of finish command",
-	Long: `A longer description that spans multiple lines
+	Short: "Return a conistency group to a full replication state",
+	Long: `Return a conistency group to a full replication state
 examples:
+
+rpda finish --group EXAMPLE_CG
+
+rpda finish --all
+
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
 
