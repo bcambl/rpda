@@ -37,7 +37,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bcambl/rpda/internal/pkg/rpda"
+	"github.com/bcambl/rpda/internal/pkg/rpa"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -51,7 +51,7 @@ examples:
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		a := &rpda.App{}
+		a := &rpa.App{}
 		a.RPAURL = viper.GetString("api.url")
 		a.Username = viper.GetString("api.username")
 		a.Password = viper.GetString("api.password")
