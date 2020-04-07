@@ -65,6 +65,7 @@ rpda start --all --latest-dr
 		a.Username = viper.GetString("api.username")
 		a.Password = viper.GetString("api.password")
 		a.Delay = viper.GetInt("api.delay")
+		a.Debug = viper.GetBool("debug")
 		a.Identifiers.ProductionNode = viper.GetString("identifiers.production_node_name_contains")
 		a.Identifiers.CopyNode = viper.GetString("identifiers.dr_copy_name_contains")
 		a.Identifiers.TestCopy = viper.GetString("identifiers.test_copy_name_contains")
@@ -86,8 +87,8 @@ rpda start --all --latest-dr
 			log.Fatal(err)
 		}
 
-		if viper.GetBool("debug") {
-			a.Debug()
+		if a.Debug {
+			a.Debugger()
 			fmt.Println("start command 'group' flag value: ", group)
 			fmt.Println("start command 'latest-test' flag value: ", latestTest)
 			fmt.Println("start command 'latest-dr' flag value: ", latestDR)
@@ -117,10 +118,10 @@ rpda start --all --latest-dr
 
 		// assign the image copy flag
 		if latestDR == true {
-			a.Copy = "DR"
+			a.Copy = a.Identifiers.CopyNode
 		}
 		if latestTest == true {
-			a.Copy = "TEST"
+			a.Copy = a.Identifiers.TestCopy
 		}
 
 		if group != "" {

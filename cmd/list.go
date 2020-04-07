@@ -54,9 +54,10 @@ rpda list
 		a.Username = viper.GetString("api.username")
 		a.Password = viper.GetString("api.password")
 		a.Delay = viper.GetInt("api.delay")
+		a.Debug = viper.GetBool("debug")
 
-		if viper.GetBool("debug") {
-			a.Debug()
+		if a.Debug {
+			a.Debugger()
 		}
 
 		a.ListGroups()

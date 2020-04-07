@@ -60,6 +60,10 @@ rpda status --group Example_CG
 		a.Username = viper.GetString("api.username")
 		a.Password = viper.GetString("api.password")
 		a.Delay = viper.GetInt("api.delay")
+		a.Debug = viper.GetBool("debug")
+		a.Identifiers.ProductionNode = viper.GetString("identifiers.production_node_name_contains")
+		a.Identifiers.CopyNode = viper.GetString("identifiers.dr_copy_name_contains")
+		a.Identifiers.TestCopy = viper.GetString("identifiers.test_copy_name_contains")
 
 		group, err := cmd.Flags().GetString("group")
 		if err != nil {
@@ -70,8 +74,8 @@ rpda status --group Example_CG
 			log.Fatal(err)
 		}
 
-		if viper.GetBool("debug") {
-			a.Debug()
+		if a.Debug {
+			a.Debugger()
 			fmt.Println("status command 'group' flag value: ", group)
 			fmt.Println("status command 'all' flag value: ", all)
 		}

@@ -49,9 +49,9 @@ var finishCmd = &cobra.Command{
 	Long: `Return a conistency group to a full replication state
 examples:
 
-rpda finish --group EXAMPLE_CG
+rpda finish --group EXAMPLE_CG --latest-test
 
-rpda finish --all
+rpda finish --all --latest-test
 
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -61,8 +61,20 @@ rpda finish --all
 		a.Username = viper.GetString("api.username")
 		a.Password = viper.GetString("api.password")
 		a.Delay = viper.GetInt("api.delay")
+		a.Debug = viper.GetBool("debug")
+		a.Identifiers.ProductionNode = viper.GetString("identifiers.production_node_name_contains")
+		a.Identifiers.CopyNode = viper.GetString("identifiers.dr_copy_name_contains")
+		a.Identifiers.TestCopy = viper.GetString("identifiers.test_copy_name_contains")
 
 		group, err := cmd.Flags().GetString("group")
+		if err != nil {
+			log.Fatal(err)
+		}
+		latestTest, err := cmd.Flags().GetBool("latest-test")
+		if err != nil {
+			log.Fatal(err)
+		}
+		latestDR, err := cmd.Flags().GetBool("latest-dr")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -71,10 +83,12 @@ rpda finish --all
 			log.Fatal(err)
 		}
 
-		if viper.GetBool("debug") {
-			a.Debug()
-			fmt.Println("status command 'group' flag value: ", group)
-			fmt.Println("status command 'all' flag value: ", all)
+		if a.Debug {
+			a.Debugger()
+			fmt.Println("start command 'group' flag value: ", group)
+			fmt.Println("start command 'latest-test' flag value: ", latestTest)
+			fmt.Println("start command 'latest-dr' flag value: ", latestDR)
+			fmt.Println("start command 'all' flag value: ", all)
 		}
 
 		// preflight checks
@@ -85,6 +99,26 @@ rpda finish --all
 			os.Exit(1)
 		}
 		a.Group = group
+
+		// ensure A image copy flag was provided
+		if latestTest == false && latestDR == false {
+			cmd.Usage()
+			os.Exit(1)
+		}
+
+		// ensure user did not provide BOTH image copy flags
+		if latestTest == true && latestDR == true {
+			cmd.Usage()
+			os.Exit(1)
+		}
+
+		// assign the image copy flag
+		if latestDR == true {
+			a.Copy = a.Identifiers.CopyNode
+		}
+		if latestTest == true {
+			a.Copy = a.Identifiers.TestCopy
+		}
 
 		if group != "" {
 			// display status of single group if a group name was provided
@@ -106,4 +140,6 @@ func init() {
 	// command flags and configuration settings.
 	finishCmd.PersistentFlags().Bool("all", false, "Display Status for All Consistency Groups")
 	finishCmd.PersistentFlags().String("group", "", "Display Status of Consistency Group by Name")
+	finishCmd.PersistentFlags().Bool("latest-test", false, "Use Latest Test Copy Image")
+	finishCmd.PersistentFlags().Bool("latest-dr", false, "Use Latest DR Copy Image")
 }

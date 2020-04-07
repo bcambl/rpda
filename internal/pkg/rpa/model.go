@@ -12,6 +12,7 @@ type App struct {
 	Copy        string      `json:"-"`
 	Delay       int         `json:"delay"`
 	Identifiers Identifiers `json:"identifiers"`
+	Debug       bool        `json:"-"`
 }
 
 // Identifiers describe the prefix/suffix strings for use in a 'contains' query
@@ -19,6 +20,17 @@ type Identifiers struct {
 	ProductionNode string `json:"production_node_name_contains"`
 	CopyNode       string `json:"dr_copy_name_contains"`
 	TestCopy       string `json:"test_copy_name_contains"`
+}
+
+// Task is used to pass variables required to perform various tasks to the API
+// This helps avoid creating functions with multiple args and provides meaningful variable names
+type Task struct {
+	GroupName  string
+	GroupUID   int
+	ClusterUID int
+	CopyName   string
+	CopyUID    int
+	Enable     bool
 }
 
 // API RESPONSE DATA STRUCTURES
@@ -82,4 +94,10 @@ type ClusterUID struct {
 // RoleInfo holds the 'ACTIVE/REPLICA' json string roleInfo within groupCopiesSettings
 type RoleInfo struct {
 	Role string `json:"role"`
+}
+
+// ImageAccessPutData is used to marshal the required PUT data to enable image access
+type ImageAccessPutData struct {
+	Mode     string `json:"mode"`
+	Scenario string `json:"scenario"`
 }

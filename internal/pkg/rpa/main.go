@@ -1,11 +1,13 @@
 package rpa
 
 import (
+	"bytes"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -78,8 +80,8 @@ Package Examples:
 	}
 }
 
-// Debug will dump the
-func (a *App) Debug() {
+// Debugger will dump the
+func (a *App) Debugger() {
 
 	fmt.Println("DEBUG ENABLED")
 	// print out App struct fields
@@ -89,6 +91,7 @@ func (a *App) Debug() {
 	fmt.Println("Group: ", a.Group)
 	fmt.Println("Copy: ", a.Copy)
 	fmt.Println("Delay: ", a.Delay)
+	fmt.Println("Debug: ", a.Debug)
 	fmt.Println("Identifiers:")
 	fmt.Println("  Production Node: ", a.Identifiers.ProductionNode)
 	fmt.Println("  Copy Node: ", a.Identifiers.CopyNode)
@@ -102,12 +105,12 @@ func basicAuth(username, password string) string {
 	return authString
 }
 
-func (a *App) apiRequest(method, url string) ([]byte, int) {
+func (a *App) apiRequest(method, url string, data io.Reader) ([]byte, int) {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		IdleConnTimeout: 1 * time.Second,
 	}
-	req, err := http.NewRequest(method, url, nil)
+	req, err := http.NewRequest(method, url, data)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -131,8 +134,7 @@ func (a *App) apiRequest(method, url string) ([]byte, int) {
 
 func (a *App) getUserGroups() []GroupUID {
 	endpoint := a.RPAURL + "/fapi/rest/5_1/users/settings/"
-	body, statusCode := a.apiRequest("GET", endpoint)
-	fmt.Println(statusCode)
+	body, _ := a.apiRequest("GET", endpoint, nil)
 	var usr UsersSettingsResponse
 	json.Unmarshal(body, &usr)
 
@@ -145,9 +147,22 @@ func (a *App) getUserGroups() []GroupUID {
 	return allowedGroups
 }
 
+func (a *App) userHasGrouAdmin(groupID int, usersGroups []GroupUID) bool {
+	var permission bool
+	if usersGroups == nil {
+		usersGroups = a.getUserGroups()
+	}
+	for _, g := range usersGroups {
+		if g.ID == groupID {
+			permission = true
+		}
+	}
+	return permission
+}
+
 func (a *App) getAllGroups() []GroupUID {
 	endpoint := a.RPAURL + "/fapi/rest/5_1/groups/"
-	body, _ := a.apiRequest("GET", endpoint)
+	body, _ := a.apiRequest("GET", endpoint, nil)
 
 	var gResp GroupsResponse
 	json.Unmarshal(body, &gResp)
@@ -156,16 +171,28 @@ func (a *App) getAllGroups() []GroupUID {
 
 func (a *App) getGroupName(groupID int) string {
 	endpoint := fmt.Sprintf(a.RPAURL+"/fapi/rest/5_1/groups/%d/name/", groupID)
-	body, _ := a.apiRequest("GET", endpoint)
+	body, _ := a.apiRequest("GET", endpoint, nil)
 
 	var groupName GroupName
 	json.Unmarshal(body, &groupName)
 	return groupName.String
 }
 
+func (a *App) getGroupIDByName(groupName string) int {
+	var id int
+	allGroups := a.getAllGroups()
+	for _, g := range allGroups {
+		n := a.getGroupName(g.ID)
+		if groupName == n {
+			id = g.ID
+		}
+	}
+	return id
+}
+
 func (a *App) getGroupCopiesSettings(groupID int) []GroupCopiesSettings {
 	endpoint := fmt.Sprintf(a.RPAURL+"/fapi/rest/5_1/groups/%d/settings/", groupID)
-	body, _ := a.apiRequest("GET", endpoint)
+	body, _ := a.apiRequest("GET", endpoint, nil)
 
 	var gsr GroupSettingsResponse
 	json.Unmarshal(body, &gsr)
@@ -221,56 +248,168 @@ func (a *App) DisplayAllGroups() {
 
 // DisplayGroup displays the status of a consistency group by group name
 func (a *App) DisplayGroup(groupName string) {
-	groups := a.getAllGroups()
-	for _, g := range groups {
-		name := a.getGroupName(g.ID)
-		if groupName == name {
-			fmt.Println(name) // consisntency group name
-			copySettings := a.getGroupCopiesSettings(g.ID)
-			for _, cs := range copySettings {
-				fmt.Printf("\t%s (%s)\n", cs.Name, cs.RoleInfo.Role)
+	groupID := a.getGroupIDByName(groupName)
+	fmt.Println(groupName) // consisntency group name
+	copySettings := a.getGroupCopiesSettings(groupID)
+	for _, cs := range copySettings {
+		fmt.Printf("\t%s (%s)\n", cs.Name, cs.RoleInfo.Role)
+	}
+}
+
+// getRequestedCopy attempts to determine the desired copy based on identifier prefixes and flags
+func (a *App) getRequestedCopy(gcs []GroupCopiesSettings) GroupCopiesSettings {
+	var c GroupCopiesSettings
+	for _, cs := range gcs { // iterate over all copies
+		if strings.Contains(cs.Name, a.Copy) && // copy contains desired criteria
+			!strings.Contains(cs.Name, a.Identifiers.ProductionNode) { // & NOT the production node
+			if a.Copy != a.Identifiers.TestCopy { // if desired copy does not match test identifier
+				if !strings.Contains(cs.Name, a.Identifiers.TestCopy) { // skip the test identifier
+					c = cs
+				}
+			} else {
+				c = cs
 			}
-			break
 		}
 	}
+	if c == (GroupCopiesSettings{}) {
+		log.Fatal("Unable to determine the desired copy to enable direct image access mode")
+	}
+	return c
 }
 
-func (a *App) startTransfer() {
-	fmt.Printf("start transfer")
+func (a *App) startTransfer(t Task) {
+	endpoint := fmt.Sprintf(
+		a.RPAURL+"/fapi/rest/5_1/groups/%d/clusters/%d/copies/%d/start_transfer",
+		t.GroupUID, t.ClusterUID, t.CopyUID)
+	_, statusCode := a.apiRequest("PUT", endpoint, nil)
+	if statusCode != 204 {
+		log.Fatalf("Error STARTING TRANSFER for Group %s Copy %s\n", t.GroupName, t.CopyName)
+	}
 }
 
-func (a *App) imageAccess(enable bool) {
+func (a *App) imageAccess(t Task) {
 	operation := "disable_image_access"
-	if enable {
+	if t.Enable == true {
 		operation = "image_access/latest/enable"
 	}
-	fmt.Printf(operation)
+	endpoint := fmt.Sprintf(
+		a.RPAURL+"/fapi/rest/5_1/groups/%d/clusters/%d/copies/%d/%s",
+		t.GroupUID, t.ClusterUID, t.CopyUID, operation)
+
+	var d ImageAccessPutData
+	d.Mode = "LOGGED_ACCESS"
+	d.Scenario = "UNKNOWN"
+
+	json, err := json.Marshal(&d)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, statusCode := a.apiRequest("PUT", endpoint, bytes.NewBuffer(json))
+	if statusCode != 204 {
+		log.Fatalf("Error enabling LATEST IMAGE for Group %s Copy %s\n", t.GroupName, t.CopyName)
+	}
 }
 
-func (a *App) directAccess(enable bool) {
-	operation := "disable_image_access"
-	if enable {
+func (a *App) directAccess(t Task) {
+	operation := "disable_direct_access"
+	if t.Enable == true {
 		operation = "enable_direct_access"
 	}
-	fmt.Printf(operation)
+	endpoint := fmt.Sprintf(
+		a.RPAURL+"/fapi/rest/5_1/groups/%d/clusters/%d/copies/%d/%s",
+		t.GroupUID, t.ClusterUID, t.CopyUID, operation)
+	_, statusCode := a.apiRequest("PUT", endpoint, nil)
+	if statusCode != 204 {
+		log.Fatalf("Error enabling DIRECT ACCESS for Group %s Copy %s\n", t.GroupName, t.CopyName)
+	}
 }
 
 // StartAll wraper for enabling Direct Image Access for all CG
 func (a *App) StartAll() {
-	fmt.Println("enable all to copy: ", a.Copy)
+	groups := a.getUserGroups() // only groups user has permission to admin
+	for _, g := range groups {
+		var t Task
+		GroupName := a.getGroupName(g.ID)
+		groupCopiesSettings := a.getGroupCopiesSettings(g.ID)
+		copySettings := a.getRequestedCopy(groupCopiesSettings)
+		t.GroupName = GroupName
+		t.GroupUID = copySettings.CopyUID.GroupUID.ID
+		t.ClusterUID = copySettings.CopyUID.GlobalCopyUID.ClusterUID.ID
+		t.CopyName = copySettings.Name
+		t.CopyUID = copySettings.CopyUID.GlobalCopyUID.CopyUID
+		t.Enable = true // whether to enable or disable the following tasks
+		a.imageAccess(t)
+		time.Sleep(3 * time.Second) // wait a few seconds for platform
+		a.directAccess(t)
+		fmt.Printf("enabled direct image access for %s on copy %s\n", GroupName, copySettings.Name)
+	}
 }
 
 // StartOne wraper for enabling Direct Image Access for a single CG
 func (a *App) StartOne() {
-	fmt.Printf("enable %s to copy: %s\n", a.Group, a.Copy)
+	groupID := a.getGroupIDByName(a.Group)
+	usersGroups := a.getUserGroups()
+	if a.userHasGrouAdmin(groupID, usersGroups) == false {
+		log.Error("User does not have sufficient access to administer ", a.Group)
+		return
+	}
+	var t Task
+	groupCopiesSettings := a.getGroupCopiesSettings(groupID)
+	copySettings := a.getRequestedCopy(groupCopiesSettings)
+	t.GroupName = a.Group
+	t.GroupUID = copySettings.CopyUID.GroupUID.ID
+	t.ClusterUID = copySettings.CopyUID.GlobalCopyUID.ClusterUID.ID
+	t.CopyName = copySettings.Name
+	t.CopyUID = copySettings.CopyUID.GlobalCopyUID.CopyUID
+	t.Enable = true // whether to enable or disable the following tasks
+	a.imageAccess(t)
+	time.Sleep(3 * time.Second) // wait a few seconds for platform
+	a.directAccess(t)
+	fmt.Printf("enabled direct image access for %s on copy %s\n", a.Group, copySettings.Name)
 }
 
 // FinishAll wraper for finishing Direct Image Access for all CG
 func (a *App) FinishAll() {
-	fmt.Println("disable all to copy: ", a.Copy)
+	groups := a.getUserGroups() // only groups user has permission to admin
+	for _, g := range groups {
+		var t Task
+		GroupName := a.getGroupName(g.ID)
+		groupID := a.getGroupIDByName(a.Group)
+		groupCopiesSettings := a.getGroupCopiesSettings(groupID)
+		copySettings := a.getRequestedCopy(groupCopiesSettings)
+		t.GroupName = GroupName
+		t.GroupUID = copySettings.CopyUID.GroupUID.ID
+		t.ClusterUID = copySettings.CopyUID.GlobalCopyUID.ClusterUID.ID
+		t.CopyName = copySettings.Name
+		t.CopyUID = copySettings.CopyUID.GlobalCopyUID.CopyUID
+		t.Enable = false // whether to enable or disable the following tasks
+		a.imageAccess(t)
+		time.Sleep(3 * time.Second) // wait a few seconds for platform
+		a.startTransfer(t)
+		fmt.Printf("finished direct image access for %s on copy %s\n", GroupName, copySettings.Name)
+	}
 }
 
 // FinishOne wraper for finishing Direct Image Access for a single CG
 func (a *App) FinishOne() {
-	fmt.Printf("disable %s to copy: %s\n", a.Group, a.Copy)
+	groupID := a.getGroupIDByName(a.Group)
+	usersGroups := a.getUserGroups()
+	if a.userHasGrouAdmin(groupID, usersGroups) == false {
+		log.Error("User does not have sufficient access to administer ", a.Group)
+		return
+	}
+	var t Task
+	groupCopiesSettings := a.getGroupCopiesSettings(groupID)
+	copySettings := a.getRequestedCopy(groupCopiesSettings)
+	t.GroupName = a.Group
+	t.GroupUID = copySettings.CopyUID.GroupUID.ID
+	t.ClusterUID = copySettings.CopyUID.GlobalCopyUID.ClusterUID.ID
+	t.CopyName = copySettings.Name
+	t.CopyUID = copySettings.CopyUID.GlobalCopyUID.CopyUID
+	t.Enable = false // whether to enable or disable the following tasks
+	a.imageAccess(t)
+	time.Sleep(3 * time.Second) // wait a few seconds for platform
+	a.startTransfer(t)
+	fmt.Printf("finished direct image access for %s on copy %s\n", a.Group, copySettings.Name)
 }
