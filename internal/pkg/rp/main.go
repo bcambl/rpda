@@ -1,4 +1,4 @@
-package rpa
+package rp
 
 import (
 	"bytes"
