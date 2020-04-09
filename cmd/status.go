@@ -55,12 +55,12 @@ rpda status --group Example_CG
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
 
+		c := &rp.Config{}
+		c.Load(cmd)
+
 		a := &rp.App{}
-		a.RPAURL = viper.GetString("api.url")
-		a.Username = viper.GetString("api.username")
-		a.Password = viper.GetString("api.password")
-		a.Delay = viper.GetInt("api.delay")
-		a.Debug = viper.GetBool("debug")
+		a.Config = c
+
 		a.Identifiers.ProductionNode = viper.GetString("identifiers.production_node_name_contains")
 		a.Identifiers.CopyNode = viper.GetString("identifiers.dr_copy_name_contains")
 		a.Identifiers.TestCopy = viper.GetString("identifiers.test_copy_name_contains")
@@ -74,7 +74,7 @@ rpda status --group Example_CG
 			log.Fatal(err)
 		}
 
-		if a.Debug {
+		if a.Config.Debug {
 			a.Debugger()
 			fmt.Println("status command 'group' flag value: ", group)
 			fmt.Println("status command 'all' flag value: ", all)

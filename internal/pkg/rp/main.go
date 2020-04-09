@@ -16,27 +16,19 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
-func (a *App) readConfig(configFile string) {
-	if _, err := os.Stat(configFile); os.IsNotExist(err) {
-		fmt.Printf("Configuration File not found.. creating\n")
-		byteArray, err := json.MarshalIndent(a, "", "  ")
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = ioutil.WriteFile(configFile, byteArray, 0644)
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println("Please Update Configuration File: " + configFile)
-		os.Exit(0)
-	}
-	config, err := ioutil.ReadFile(configFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-	json.Unmarshal(config, &a)
+// Load will populate the application config via vobra/viper
+func (c *Config) Load(cmd *cobra.Command) *Config {
+	c.RPAURL = viper.GetString("api.url")
+	c.Username = viper.GetString("api.username")
+	c.Password = viper.GetString("api.password")
+	c.Delay = viper.GetInt("api.delay")
+	c.NoOp = viper.GetBool("noop")
+	c.Debug = viper.GetBool("debug")
+	return c
 }
 
 func (a *App) usageExamples() {
@@ -85,13 +77,13 @@ func (a *App) Debugger() {
 
 	fmt.Println("DEBUG ENABLED")
 	// print out App struct fields
-	fmt.Println("RPA URL: ", a.RPAURL)
-	fmt.Println("Username: ", a.Username)
-	fmt.Println("Password: ", a.Password)
+	fmt.Println("RPA URL: ", a.Config.RPAURL)
+	fmt.Println("Username: ", a.Config.Username)
+	fmt.Println("Password: ", a.Config.Password)
 	fmt.Println("Group: ", a.Group)
 	fmt.Println("Copy: ", a.Copy)
-	fmt.Println("Delay: ", a.Delay)
-	fmt.Println("Debug: ", a.Debug)
+	fmt.Println("Delay: ", a.Config.Delay)
+	fmt.Println("Debug: ", a.Config.Debug)
 	fmt.Println("Identifiers:")
 	fmt.Println("  Production Node: ", a.Identifiers.ProductionNode)
 	fmt.Println("  Copy Node: ", a.Identifiers.CopyNode)
@@ -114,7 +106,7 @@ func (a *App) apiRequest(method, url string, data io.Reader) ([]byte, int) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	authString := basicAuth(a.Username, a.Password)
+	authString := basicAuth(a.Config.Username, a.Config.Password)
 	req.Header.Set("Authorization", authString)
 	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{Transport: tr}
@@ -133,14 +125,14 @@ func (a *App) apiRequest(method, url string, data io.Reader) ([]byte, int) {
 }
 
 func (a *App) getUserGroups() []GroupUID {
-	endpoint := a.RPAURL + "/fapi/rest/5_1/users/settings/"
+	endpoint := a.Config.RPAURL + "/fapi/rest/5_1/users/settings/"
 	body, _ := a.apiRequest("GET", endpoint, nil)
 	var usr UsersSettingsResponse
 	json.Unmarshal(body, &usr)
 
 	var allowedGroups []GroupUID
 	for _, u := range usr.Users {
-		if u.Name == a.Username {
+		if u.Name == a.Config.Username {
 			allowedGroups = u.Groups
 		}
 	}
@@ -161,7 +153,7 @@ func (a *App) userHasGrouAdmin(groupID int, usersGroups []GroupUID) bool {
 }
 
 func (a *App) getAllGroups() []GroupUID {
-	endpoint := a.RPAURL + "/fapi/rest/5_1/groups/"
+	endpoint := a.Config.RPAURL + "/fapi/rest/5_1/groups/"
 	body, _ := a.apiRequest("GET", endpoint, nil)
 
 	var gResp GroupsResponse
@@ -170,7 +162,7 @@ func (a *App) getAllGroups() []GroupUID {
 }
 
 func (a *App) getGroupName(groupID int) string {
-	endpoint := fmt.Sprintf(a.RPAURL+"/fapi/rest/5_1/groups/%d/name/", groupID)
+	endpoint := fmt.Sprintf(a.Config.RPAURL+"/fapi/rest/5_1/groups/%d/name/", groupID)
 	body, _ := a.apiRequest("GET", endpoint, nil)
 
 	var groupName GroupName
@@ -191,7 +183,7 @@ func (a *App) getGroupIDByName(groupName string) int {
 }
 
 func (a *App) getGroupCopiesSettings(groupID int) []GroupCopiesSettings {
-	endpoint := fmt.Sprintf(a.RPAURL+"/fapi/rest/5_1/groups/%d/settings/", groupID)
+	endpoint := fmt.Sprintf(a.Config.RPAURL+"/fapi/rest/5_1/groups/%d/settings/", groupID)
 	body, _ := a.apiRequest("GET", endpoint, nil)
 
 	var gsr GroupSettingsResponse
@@ -279,7 +271,7 @@ func (a *App) getRequestedCopy(gcs []GroupCopiesSettings) GroupCopiesSettings {
 
 func (a *App) startTransfer(t Task) {
 	endpoint := fmt.Sprintf(
-		a.RPAURL+"/fapi/rest/5_1/groups/%d/clusters/%d/copies/%d/start_transfer",
+		a.Config.RPAURL+"/fapi/rest/5_1/groups/%d/clusters/%d/copies/%d/start_transfer",
 		t.GroupUID, t.ClusterUID, t.CopyUID)
 	_, statusCode := a.apiRequest("PUT", endpoint, nil)
 	if statusCode != 204 {
@@ -293,7 +285,7 @@ func (a *App) imageAccess(t Task) {
 		operation = "image_access/latest/enable"
 	}
 	endpoint := fmt.Sprintf(
-		a.RPAURL+"/fapi/rest/5_1/groups/%d/clusters/%d/copies/%d/%s",
+		a.Config.RPAURL+"/fapi/rest/5_1/groups/%d/clusters/%d/copies/%d/%s",
 		t.GroupUID, t.ClusterUID, t.CopyUID, operation)
 
 	var d ImageAccessPutData
@@ -317,7 +309,7 @@ func (a *App) directAccess(t Task) {
 		operation = "enable_direct_access"
 	}
 	endpoint := fmt.Sprintf(
-		a.RPAURL+"/fapi/rest/5_1/groups/%d/clusters/%d/copies/%d/%s",
+		a.Config.RPAURL+"/fapi/rest/5_1/groups/%d/clusters/%d/copies/%d/%s",
 		t.GroupUID, t.ClusterUID, t.CopyUID, operation)
 	_, statusCode := a.apiRequest("PUT", endpoint, nil)
 	if statusCode != 204 {

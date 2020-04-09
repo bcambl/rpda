@@ -34,7 +34,6 @@ POSSIBILITY OF SUCH DAMAGE.
 import (
 	"github.com/bcambl/rpda/internal/pkg/rp"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // listCmd represents the list command
@@ -49,14 +48,13 @@ rpda list
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		a := &rp.App{}
-		a.RPAURL = viper.GetString("api.url")
-		a.Username = viper.GetString("api.username")
-		a.Password = viper.GetString("api.password")
-		a.Delay = viper.GetInt("api.delay")
-		a.Debug = viper.GetBool("debug")
+		c := &rp.Config{}
+		c.Load(cmd)
 
-		if a.Debug {
+		a := &rp.App{}
+		a.Config = c
+
+		if a.Config.Debug {
 			a.Debugger()
 		}
 

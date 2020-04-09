@@ -5,14 +5,20 @@ package rp
 
 // App contains settings & variables for the current execution time
 type App struct {
-	RPAURL      string      `json:"rpa_url"`
-	Username    string      `json:"username"`
-	Password    string      `json:"password"`
+	Config      *Config     `json:"config"`
 	Group       string      `json:"-"`
 	Copy        string      `json:"-"`
-	Delay       int         `json:"delay"`
 	Identifiers Identifiers `json:"identifiers"`
-	Debug       bool        `json:"-"`
+}
+
+// Config contains configurations for the application
+type Config struct {
+	RPAURL   string `json:"rpa_url"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Delay    int    `json:"delay"`
+	NoOp     bool   `json:"-"`
+	Debug    bool   `json:"-"`
 }
 
 // Identifiers describe the prefix/suffix strings for use in a 'contains' query

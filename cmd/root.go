@@ -45,8 +45,11 @@ import (
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
-var debugFlag bool
+var (
+	cfgFile   string
+	debugFlag bool
+	noopFlag  bool
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -101,8 +104,8 @@ func init() {
 
 	// Global application flags
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.rpda.yaml)")
+	rootCmd.PersistentFlags().BoolVar(&noopFlag, "noop", false, "enable noop mode (no changes will be made)")
 	rootCmd.PersistentFlags().BoolVar(&debugFlag, "debug", false, "enable debug")
-
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -163,7 +166,8 @@ func initConfig() {
 	// prompt for password if not saved
 	passwordPrompt()
 
-	// add debug flag to viper
+	// add noop and debug flags to viper
+	viper.Set("noop", noopFlag)
 	viper.Set("debug", debugFlag)
 }
 
