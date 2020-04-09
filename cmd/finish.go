@@ -85,10 +85,10 @@ rpda finish --all --latest-test
 
 		if a.Debug {
 			a.Debugger()
-			fmt.Println("start command 'group' flag value: ", group)
-			fmt.Println("start command 'latest-test' flag value: ", latestTest)
-			fmt.Println("start command 'latest-dr' flag value: ", latestDR)
-			fmt.Println("start command 'all' flag value: ", all)
+			fmt.Println("finish command 'group' flag value: ", group)
+			fmt.Println("finish command 'latest-test' flag value: ", latestTest)
+			fmt.Println("finish command 'latest-dr' flag value: ", latestDR)
+			fmt.Println("finish command 'all' flag value: ", all)
 		}
 
 		// preflight checks

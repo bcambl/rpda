@@ -52,8 +52,38 @@ var debugFlag bool
 var rootCmd = &cobra.Command{
 	Use:   "rpda",
 	Short: "RecoverPoint Direct Access",
-	Long: `A longer description that spans multiple lines
+	Long: `RecoverPoint Direct Access
+==========================
+
 examples:
+
+# list all CG's by name
+rpda list 
+ 
+# display replication status for all CG's
+rpda status —all 
+ 
+# display replication status for a single CG
+rpda status —group My_CG 
+ 
+# enable direct image access mode on latest test copy for ALL CG's
+rpda enable —all —test 
+ 
+# enable direct image access mode on latest test copy for single CG
+rpda enable —group My_CG —test 
+ 
+# enable direct image access mode on latest "DR" copy for single CG
+rpda enable —group My_CG —dr 
+ 
+# enable direct image access mode on latest copy by name for single CG
+rpda enable —group My_CG —copy name 
+ 
+# disable direct image access mode for ALL CG's (all copies)
+rpda finish —all 
+ 
+# disable direct image access mode for a single CG (all copies)
+rpda finish —group My_CG 
+
     `,
 }
 
@@ -139,7 +169,7 @@ func initConfig() {
 
 func passwordPrompt() {
 	// password _can_ be saved to the config file; however, prompt by default.
-	// consider this a hidden feature as passowrds should not be stored in in plain text.
+	// consider this a hidden feature as passwords should not be stored in in plain text.
 	if viper.Get("api.password") == nil {
 		fmt.Printf("provide password for %s: ", viper.Get("api.username"))
 

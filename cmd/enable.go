@@ -42,20 +42,20 @@ import (
 	"github.com/spf13/viper"
 )
 
-// startCmd represents the start command
-var startCmd = &cobra.Command{
-	Use:   "start",
+// enableCmd represents the enable command
+var enableCmd = &cobra.Command{
+	Use:   "enable",
 	Short: "Enable direct access mode for the latest copy",
 	Long: `Enable direct access mode for the latest copy
 examples:
 
-rpda start --group EXAMPLE_CG --latest-test
+rpda enable --group EXAMPLE_CG --latest-test
 
-rpda start --group EXAMPLE_CG --latest-dr
+rpda enable --group EXAMPLE_CG --latest-dr
 
-rpda start --all --latest-test
+rpda enable --all --latest-test
 
-rpda start --all --latest-dr
+rpda enable --all --latest-dr
 
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -89,10 +89,10 @@ rpda start --all --latest-dr
 
 		if a.Debug {
 			a.Debugger()
-			fmt.Println("start command 'group' flag value: ", group)
-			fmt.Println("start command 'latest-test' flag value: ", latestTest)
-			fmt.Println("start command 'latest-dr' flag value: ", latestDR)
-			fmt.Println("start command 'all' flag value: ", all)
+			fmt.Println("enable command 'group' flag value: ", group)
+			fmt.Println("enable command 'latest-test' flag value: ", latestTest)
+			fmt.Println("enable command 'latest-dr' flag value: ", latestDR)
+			fmt.Println("enable command 'all' flag value: ", all)
 		}
 
 		// preflight checks
@@ -139,11 +139,11 @@ rpda start --all --latest-dr
 }
 
 func init() {
-	rootCmd.AddCommand(startCmd)
+	rootCmd.AddCommand(enableCmd)
 
 	// command flags and configuration settings.
-	startCmd.PersistentFlags().Bool("all", false, "Enable Direct Image Access for All Consistency Groups")
-	startCmd.PersistentFlags().String("group", "", "Enable Direct Image Access for Consistency Group by Name")
-	startCmd.PersistentFlags().Bool("latest-test", false, "Use Latest Test Copy Image")
-	startCmd.PersistentFlags().Bool("latest-dr", false, "Use Latest DR Copy Image")
+	enableCmd.PersistentFlags().Bool("all", false, "Enable Direct Image Access for All Consistency Groups")
+	enableCmd.PersistentFlags().String("group", "", "Enable Direct Image Access for Consistency Group by Name")
+	enableCmd.PersistentFlags().Bool("latest-test", false, "Use Latest Test Copy Image")
+	enableCmd.PersistentFlags().Bool("latest-dr", false, "Use Latest DR Copy Image")
 }
