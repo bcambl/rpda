@@ -35,50 +35,55 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/bcambl/rpda/internal/pkg/rp"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bcambl/rpda/internal/pkg/rpa"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-// startCmd represents the start command
-var startCmd = &cobra.Command{
-	Use:   "start",
+// enableCmd represents the enable command
+var enableCmd = &cobra.Command{
+	Use:   "enable",
 	Short: "Enable direct access mode for the latest copy",
 	Long: `Enable direct access mode for the latest copy
 examples:
 
-rpda start --group EXAMPLE_CG --latest-test
+rpda enable --group EXAMPLE_CG --test
 
-rpda start --group EXAMPLE_CG --latest-dr
+rpda enable --group EXAMPLE_CG --dr
 
-rpda start --all --latest-test
+rpda enable --all --test
 
-rpda start --all --latest-dr
+rpda enable --all --dr
 
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		a := &rpa.App{}
-		a.RPAURL = viper.GetString("api.url")
-		a.Username = viper.GetString("api.username")
-		a.Password = viper.GetString("api.password")
-		a.Delay = viper.GetInt("api.delay")
-		a.Debug = viper.GetBool("debug")
-		a.Identifiers.ProductionNode = viper.GetString("identifiers.production_node_name_contains")
-		a.Identifiers.CopyNode = viper.GetString("identifiers.dr_copy_name_contains")
-		a.Identifiers.TestCopy = viper.GetString("identifiers.test_copy_name_contains")
+		// Load API Configuration
+		c := &rp.Config{}
+		c.Load(cmd)
+
+		// Load Consistency Group Name Identifiers
+		i := &rp.Identifiers{}
+		i.Load(cmd)
+
+		a := &rp.App{}
+		a.Config = c
+		a.Identifiers = i
 
 		group, err := cmd.Flags().GetString("group")
 		if err != nil {
 			log.Fatal(err)
 		}
-		latestTest, err := cmd.Flags().GetBool("latest-test")
+		copyByName, err := cmd.Flags().GetString("copy")
 		if err != nil {
 			log.Fatal(err)
 		}
-		latestDR, err := cmd.Flags().GetBool("latest-dr")
+		testCopy, err := cmd.Flags().GetBool("test")
+		if err != nil {
+			log.Fatal(err)
+		}
+		drCopy, err := cmd.Flags().GetBool("dr")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -87,41 +92,57 @@ rpda start --all --latest-dr
 			log.Fatal(err)
 		}
 
-		if a.Debug {
+		if a.Config.Debug {
 			a.Debugger()
-			fmt.Println("start command 'group' flag value: ", group)
-			fmt.Println("start command 'latest-test' flag value: ", latestTest)
-			fmt.Println("start command 'latest-dr' flag value: ", latestDR)
-			fmt.Println("start command 'all' flag value: ", all)
+			fmt.Println("enable command 'group' flag value: ", group)
+			fmt.Println("enable command 'copy' flag value: ", copyByName)
+			fmt.Println("enable command 'test' flag value: ", testCopy)
+			fmt.Println("enable command 'dr' flag value: ", drCopy)
+			fmt.Println("enable command 'all' flag value: ", all)
 		}
 
 		// preflight checks
 
 		// ensure group or all flags were provided
 		if all == false && group == "" {
+			log.Error("Either --all or --group must be specified.")
 			cmd.Usage()
 			os.Exit(1)
 		}
+
+		// if --all flag was specified, --copy cannot be used
+		if all == true && copyByName != "" {
+			log.Error("--copy cannot be used with --all")
+			cmd.Usage()
+			os.Exit(1)
+		}
+
 		a.Group = group
+		a.CopyName = copyByName
 
-		// ensure A image copy flag was provided
-		if latestTest == false && latestDR == false {
+		// if an exact copy name provided, ensure A image copy flag provided
+		if copyByName == "" && testCopy == false && drCopy == false {
+			if all {
+				log.Error("One of --test or --dr must be specified")
+			} else {
+				log.Error("One of --test --dr or --copy must be specified")
+			}
 			cmd.Usage()
 			os.Exit(1)
 		}
 
-		// ensure user did not provide BOTH image copy flags
-		if latestTest == true && latestDR == true {
+		// also ensure user did not provide BOTH image copy flags
+		if copyByName != "" && (testCopy == true || drCopy == true) {
+			log.Error("--copy cannot be combined with --test or --dr")
 			cmd.Usage()
 			os.Exit(1)
 		}
 
-		// assign the image copy flag
-		if latestDR == true {
-			a.Copy = a.Identifiers.CopyNode
+		if drCopy == true {
+			a.CopyRegexp = a.Identifiers.CopyNodeRegexp
 		}
-		if latestTest == true {
-			a.Copy = a.Identifiers.TestCopy
+		if testCopy == true {
+			a.CopyRegexp = a.Identifiers.TestNodeRegexp
 		}
 
 		if group != "" {
@@ -139,11 +160,12 @@ rpda start --all --latest-dr
 }
 
 func init() {
-	rootCmd.AddCommand(startCmd)
+	rootCmd.AddCommand(enableCmd)
 
 	// command flags and configuration settings.
-	startCmd.PersistentFlags().Bool("all", false, "Enable Direct Image Access for All Consistency Groups")
-	startCmd.PersistentFlags().String("group", "", "Enable Direct Image Access for Consistency Group by Name")
-	startCmd.PersistentFlags().Bool("latest-test", false, "Use Latest Test Copy Image")
-	startCmd.PersistentFlags().Bool("latest-dr", false, "Use Latest DR Copy Image")
+	enableCmd.PersistentFlags().Bool("all", false, "Enable Direct Image Access for All Consistency Groups")
+	enableCmd.PersistentFlags().String("group", "", "Enable Direct Image Access for Consistency Group by Name")
+	enableCmd.PersistentFlags().String("copy", "", "Use Latest Test Copy Image By Name (only usable with --group)")
+	enableCmd.PersistentFlags().Bool("test", false, "Use Latest Test Copy Image")
+	enableCmd.PersistentFlags().Bool("dr", false, "Use Latest DR Copy Image")
 }

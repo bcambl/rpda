@@ -33,5 +33,5 @@ package main
 import "github.com/bcambl/rpda/cmd"
 
 func main() {
-  cmd.Execute()
+	cmd.Execute()
 }

@@ -36,9 +36,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bcambl/rpda/internal/pkg/rpa"
+	"github.com/bcambl/rpda/internal/pkg/rp"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // statusCmd represents the status command
@@ -55,15 +54,17 @@ rpda status --group Example_CG
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		a := &rpa.App{}
-		a.RPAURL = viper.GetString("api.url")
-		a.Username = viper.GetString("api.username")
-		a.Password = viper.GetString("api.password")
-		a.Delay = viper.GetInt("api.delay")
-		a.Debug = viper.GetBool("debug")
-		a.Identifiers.ProductionNode = viper.GetString("identifiers.production_node_name_contains")
-		a.Identifiers.CopyNode = viper.GetString("identifiers.dr_copy_name_contains")
-		a.Identifiers.TestCopy = viper.GetString("identifiers.test_copy_name_contains")
+		// Load API Configuration
+		c := &rp.Config{}
+		c.Load(cmd)
+
+		// Load Consistency Group Name Identifiers
+		i := &rp.Identifiers{}
+		i.Load(cmd)
+
+		a := &rp.App{}
+		a.Config = c
+		a.Identifiers = i
 
 		group, err := cmd.Flags().GetString("group")
 		if err != nil {
@@ -74,7 +75,7 @@ rpda status --group Example_CG
 			log.Fatal(err)
 		}
 
-		if a.Debug {
+		if a.Config.Debug {
 			a.Debugger()
 			fmt.Println("status command 'group' flag value: ", group)
 			fmt.Println("status command 'all' flag value: ", all)

@@ -45,15 +45,48 @@ import (
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
-var debugFlag bool
+var (
+	cfgFile   string
+	debugFlag bool
+	checkFlag bool
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "rpda",
 	Short: "RecoverPoint Direct Access",
-	Long: `A longer description that spans multiple lines
+	Long: `RecoverPoint Direct Access
+==========================
+
 examples:
+
+# list all CG's by name
+rpda list
+ 
+# display replication status for all CG's
+rpda status --all
+ 
+# display replication status for a single CG
+rpda status --group My_CG
+ 
+# enable direct image access mode on latest test copy for ALL CG's
+rpda enable --all --test
+ 
+# enable direct image access mode on latest test copy for single CG
+rpda enable --group My_CG --test
+ 
+# enable direct image access mode on latest "DR" copy for single CG
+rpda enable --group My_CG --dr
+ 
+# enable direct image access mode on latest copy by name for single CG
+rpda enable --group My_CG --copy <desired copy name>
+ 
+# disable direct image access mode for ALL CG's (all copies)
+rpda finish --all
+ 
+# disable direct image access mode for a single CG (all copies)
+rpda finish --group My_CG
+
     `,
 }
 
@@ -71,8 +104,8 @@ func init() {
 
 	// Global application flags
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.rpda.yaml)")
-	rootCmd.PersistentFlags().BoolVar(&debugFlag, "debug", false, "enable debug")
-
+	rootCmd.PersistentFlags().BoolVar(&checkFlag, "check", false, "enable check mode (no changes will be made)")
+	rootCmd.PersistentFlags().BoolVar(&debugFlag, "debug", false, "enable debug mode")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -109,9 +142,9 @@ func initConfig() {
 			viper.Set("api.username", "username")
 			viper.Set("api.delay", 0)
 			// Define placeholder copy identifiers
-			viper.Set("identifiers.production_node_name_contains", "_PN")
-			viper.Set("identifiers.dr_copy_name_contains", "_CN")
-			viper.Set("identifiers.test_copy_name_contains", "TC_")
+			viper.Set("identifiers.production_node_regexp", "_PN$")
+			viper.Set("identifiers.copy_node_regexp", "_CN$")
+			viper.Set("identifiers.test_node_regexp", "^TC_")
 
 			home, err := homedir.Dir()
 			if err != nil {
@@ -128,18 +161,21 @@ func initConfig() {
 			log.Fatal(err)
 		}
 	}
-	fmt.Println("Using config file:", viper.ConfigFileUsed())
+	// add check and debug flags to viper
+	viper.Set("check", checkFlag)
+	viper.Set("debug", debugFlag)
+
+	if debugFlag {
+		fmt.Println("Using config file:", viper.ConfigFileUsed())
+	}
 
 	// prompt for password if not saved
 	passwordPrompt()
-
-	// add debug flag to viper
-	viper.Set("debug", debugFlag)
 }
 
 func passwordPrompt() {
 	// password _can_ be saved to the config file; however, prompt by default.
-	// consider this a hidden feature as passowrds should not be stored in in plain text.
+	// consider this a hidden feature as passwords should not be stored in in plain text.
 	if viper.Get("api.password") == nil {
 		fmt.Printf("provide password for %s: ", viper.Get("api.username"))
 
