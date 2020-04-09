@@ -38,7 +38,6 @@ import (
 
 	"github.com/bcambl/rpda/internal/pkg/rp"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // statusCmd represents the status command
@@ -55,15 +54,17 @@ rpda status --group Example_CG
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
 
+		// Load API Configuration
 		c := &rp.Config{}
 		c.Load(cmd)
 
+		// Load Consistency Group Name Identifiers
+		i := &rp.Identifiers{}
+		i.Load(cmd)
+
 		a := &rp.App{}
 		a.Config = c
-
-		a.Identifiers.ProductionNode = viper.GetString("identifiers.production_node_name_contains")
-		a.Identifiers.CopyNode = viper.GetString("identifiers.dr_copy_name_contains")
-		a.Identifiers.TestCopy = viper.GetString("identifiers.test_copy_name_contains")
+		a.Identifiers = i
 
 		group, err := cmd.Flags().GetString("group")
 		if err != nil {

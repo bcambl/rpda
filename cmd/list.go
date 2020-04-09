@@ -48,6 +48,7 @@ rpda list
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 
+		// Load API Configuration
 		c := &rp.Config{}
 		c.Load(cmd)
 

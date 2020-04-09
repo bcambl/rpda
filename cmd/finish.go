@@ -39,7 +39,6 @@ import (
 
 	"github.com/bcambl/rpda/internal/pkg/rp"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // finishCmd represents the finish command
@@ -49,32 +48,38 @@ var finishCmd = &cobra.Command{
 	Long: `Return a conistency group to a full replication state
 examples:
 
-rpda finish --group EXAMPLE_CG --latest-test
+rpda finish --group EXAMPLE_CG --test
 
-rpda finish --all --latest-test
+rpda finish --all --test
 
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
 
+		// Load API Configuration
 		c := &rp.Config{}
 		c.Load(cmd)
 
+		// Load Consistency Group Name Identifiers
+		i := &rp.Identifiers{}
+		i.Load(cmd)
+
 		a := &rp.App{}
 		a.Config = c
-
-		a.Identifiers.ProductionNode = viper.GetString("identifiers.production_node_name_contains")
-		a.Identifiers.CopyNode = viper.GetString("identifiers.dr_copy_name_contains")
-		a.Identifiers.TestCopy = viper.GetString("identifiers.test_copy_name_contains")
+		a.Identifiers = i
 
 		group, err := cmd.Flags().GetString("group")
 		if err != nil {
 			log.Fatal(err)
 		}
-		latestTest, err := cmd.Flags().GetBool("latest-test")
+		copyByName, err := cmd.Flags().GetString("copy")
 		if err != nil {
 			log.Fatal(err)
 		}
-		latestDR, err := cmd.Flags().GetBool("latest-dr")
+		testCopy, err := cmd.Flags().GetBool("test")
+		if err != nil {
+			log.Fatal(err)
+		}
+		drCopy, err := cmd.Flags().GetBool("dr")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -86,8 +91,9 @@ rpda finish --all --latest-test
 		if a.Config.Debug {
 			a.Debugger()
 			fmt.Println("finish command 'group' flag value: ", group)
-			fmt.Println("finish command 'latest-test' flag value: ", latestTest)
-			fmt.Println("finish command 'latest-dr' flag value: ", latestDR)
+			fmt.Println("enable command 'copy' flag value: ", copyByName)
+			fmt.Println("finish command 'test' flag value: ", testCopy)
+			fmt.Println("finish command 'dr' flag value: ", drCopy)
 			fmt.Println("finish command 'all' flag value: ", all)
 		}
 
@@ -95,29 +101,44 @@ rpda finish --all --latest-test
 
 		// ensure group or all flags were provided
 		if all == false && group == "" {
+			log.Error("Either --all or --group must be specified.")
 			cmd.Usage()
 			os.Exit(1)
 		}
+
+		// if --all flag was specified, --copy cannot be used
+		if all == true && copyByName != "" {
+			log.Error("--copy cannot be used with --all")
+			cmd.Usage()
+			os.Exit(1)
+		}
+
 		a.Group = group
+		a.CopyName = copyByName
 
-		// ensure A image copy flag was provided
-		if latestTest == false && latestDR == false {
+		// if an exact copy name provided, ensure A image copy flag provided
+		if copyByName == "" && testCopy == false && drCopy == false {
+			if all {
+				log.Error("One of --test or --dr must be specified")
+			} else {
+				log.Error("One of --test --dr or --copy must be specified")
+			}
 			cmd.Usage()
 			os.Exit(1)
 		}
 
-		// ensure user did not provide BOTH image copy flags
-		if latestTest == true && latestDR == true {
+		// also ensure user did not provide BOTH image copy flags
+		if copyByName != "" && (testCopy == true || drCopy == true) {
+			log.Error("--copy cannot be combined with --test or --dr")
 			cmd.Usage()
 			os.Exit(1)
 		}
 
-		// assign the image copy flag
-		if latestDR == true {
-			a.Copy = a.Identifiers.CopyNode
+		if drCopy == true {
+			a.CopyRegexp = a.Identifiers.CopyNodeRegexp
 		}
-		if latestTest == true {
-			a.Copy = a.Identifiers.TestCopy
+		if testCopy == true {
+			a.CopyRegexp = a.Identifiers.TestNodeRegexp
 		}
 
 		if group != "" {
@@ -140,6 +161,7 @@ func init() {
 	// command flags and configuration settings.
 	finishCmd.PersistentFlags().Bool("all", false, "Display Status for All Consistency Groups")
 	finishCmd.PersistentFlags().String("group", "", "Display Status of Consistency Group by Name")
-	finishCmd.PersistentFlags().Bool("latest-test", false, "Use Latest Test Copy Image")
-	finishCmd.PersistentFlags().Bool("latest-dr", false, "Use Latest DR Copy Image")
+	finishCmd.PersistentFlags().String("copy", "", "Use Latest Test Copy Image By Name (only usable with --group)")
+	finishCmd.PersistentFlags().Bool("test", false, "Use Latest Test Copy Image")
+	finishCmd.PersistentFlags().Bool("dr", false, "Use Latest DR Copy Image")
 }

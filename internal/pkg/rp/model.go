@@ -1,31 +1,34 @@
 package rp
 
+import "regexp"
+
 // APPLICATION STATE & CONFIGURATION
 // =================================================================================================
 
 // App contains settings & variables for the current execution time
 type App struct {
-	Config      *Config     `json:"config"`
-	Group       string      `json:"-"`
-	Copy        string      `json:"-"`
-	Identifiers Identifiers `json:"identifiers"`
+	Config      *Config        `json:"config"`
+	Group       string         `json:"-"`
+	CopyName    string         `json:"-"`
+	CopyRegexp  *regexp.Regexp `json:"-"`
+	Identifiers *Identifiers   `json:"identifiers"`
 }
 
 // Config contains configurations for the application
 type Config struct {
-	RPAURL   string `json:"rpa_url"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Delay    int    `json:"delay"`
-	NoOp     bool   `json:"-"`
-	Debug    bool   `json:"-"`
+	RPAURL    string `json:"rpa_url"`
+	Username  string `json:"username"`
+	Password  string `json:"password"`
+	Delay     int    `json:"delay"`
+	CheckMode bool   `json:"-"`
+	Debug     bool   `json:"-"`
 }
 
 // Identifiers describe the prefix/suffix strings for use in a 'contains' query
 type Identifiers struct {
-	ProductionNode string `json:"production_node_name_contains"`
-	CopyNode       string `json:"dr_copy_name_contains"`
-	TestCopy       string `json:"test_copy_name_contains"`
+	ProductionNodeRegexp *regexp.Regexp `json:"production_node_regexp"`
+	CopyNodeRegexp       *regexp.Regexp `json:"copy_node_regexp"`
+	TestNodeRegexp       *regexp.Regexp `json:"test_node_regexp"`
 }
 
 // Task is used to pass variables required to perform various tasks to the API

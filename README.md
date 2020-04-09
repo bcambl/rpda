@@ -15,9 +15,10 @@ api:
   url: https://recoverpoint_fqdn/
   username: username
 identifiers:
-  dr_copy_name_contains: _CN
-  production_node_name_contains: _PN
-  test_copy_name_contains: TC_
+  copy_node_regexp: _CN$
+  production_node_regexp: _PN$
+  test_node_regexp: ^TC_
+
 
 ```
 
@@ -65,33 +66,44 @@ rpda status --group TestGroup
 
 Enable Direct Image Access Mode for the **_Test_ Copy** on _ALL_ Consistency Groups
 ```
-rpda start --all --test
+rpda enable --all --test
 ```
 
 Enable Direct Image Access Mode for the **_Test_ Copy** on Consistency Group `TestGroup` 
 ```
-rpda start --group TestGroup --test
+rpda enable --group TestGroup --test
 ```
 
 Enable Direct Image Access Mode for the **_DR_ Copy** on _ALL_ Consistency Groups
 ```
-rpda start --all --dr
+rpda enable --all --dr
 ```
 
 Enable Direct Image Access Mode for the **_DR_ Copy** on Consistency Group `TestGroup` 
 ```
-rpda start --group TestGroup --dr
+rpda enable --group TestGroup --dr
 ```
 
-Finish Direct Image Access Mode on _ALL_ Consistency Groups
+Finish Direct Image Access Mode on _ALL_ Consistency Groups for **_Test_ Copy**
 ```
-rpda finish --all
+rpda finish --all --test
 ```
 
-Finish Direct Image Access Mode on Consistency Group `TestGroup`
+Finish Direct Image Access Mode on Consistency Group `TestGroup` for **_Test_ Copy**
 ```
-rpda finish --group TestGroup
+rpda finish --group TestGroup --test
 ```
+
+Finish Direct Image Access Mode on _ALL_ Consistency Groups for **_DR_ Copy**
+```
+rpda finish --all --dr
+```
+
+Finish Direct Image Access Mode on Consistency Group `TestGroup` for **_DR_ Copy**
+```
+rpda finish --group TestGroup --dr
+```
+
 
 ## Build Instructions
 
@@ -107,7 +119,7 @@ GOOS=linux go build -ldflags="-s -w" -o rpda main.go
 
 Build Project for x86_64 Windows
 ```
-GOOS=windows go build -ldflags="-s -w" -o rpda main.go
+GOOS=windows go build -ldflags="-s -w" -o rpda.exe main.go
 ```
 
 Please read more about building the project for other platforms [here](https://golang.org/pkg/go/build/).
