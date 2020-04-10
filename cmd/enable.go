@@ -48,6 +48,8 @@ var enableCmd = &cobra.Command{
 	Long: `Enable direct access mode for the latest copy
 examples:
 
+rpda enable --group EXAMPLE_CG --copy Test_Copy
+
 rpda enable --group EXAMPLE_CG --test
 
 rpda enable --group EXAMPLE_CG --dr
@@ -120,7 +122,7 @@ rpda enable --all --dr
 		a.Group = group
 		a.CopyName = copyByName
 
-		// if an exact copy name provided, ensure A image copy flag provided
+		// if an exact copy name was not provided, ensure an image copy flag was provided
 		if copyByName == "" && testCopy == false && drCopy == false {
 			if all {
 				log.Error("One of --test or --dr must be specified")
@@ -147,10 +149,10 @@ rpda enable --all --dr
 
 		if group != "" {
 			// display status of single group if a group name was provided
-			a.StartOne()
+			a.EnableOne()
 		} else if all {
-			// display status of all groups if the all flag was provided
-			a.StartAll()
+			// display status of all groups if the --all flag was provided
+			a.EnableAll()
 		} else {
 			// otherwise, display command usage
 			cmd.Usage()

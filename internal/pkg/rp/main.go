@@ -323,8 +323,8 @@ func (a *App) directAccess(t Task) {
 	fmt.Printf("Enabling Direct Access for Group %s Copy %s\n", t.GroupName, t.CopyName)
 }
 
-// StartAll wraper for enabling Direct Image Access for all CG
-func (a *App) StartAll() {
+// EnableAll wraper for enabling Direct Image Access for all CG
+func (a *App) EnableAll() {
 	groups := a.getUserGroups() // only groups user has permission to admin
 	for _, g := range groups {
 		var t Task
@@ -345,8 +345,8 @@ func (a *App) StartAll() {
 	}
 }
 
-// StartOne wraper for enabling Direct Image Access for a single CG
-func (a *App) StartOne() {
+// EnableOne wraper for enabling Direct Image Access for a single CG
+func (a *App) EnableOne() {
 	groupID := a.getGroupIDByName(a.Group)
 	usersGroups := a.getUserGroups()
 	if a.userHasGrouAdmin(groupID, usersGroups) == false {
