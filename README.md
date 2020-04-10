@@ -59,6 +59,12 @@ One of the following _copy flags_ must be provided:
  - only one of the above flags can be provided at once.
  - `--copy` cannot be combined with `--all`
 
+## Additional Flags
+
+- `--delay 60`: will introduce a delay of `60` seconds between consistency group changes when using `--all` (default: `0`)
+- `--debug`: will produce additional debugging output to assist with troubleshooting & development
+- `--check`: will run allow the application to execute _without_ making any changes (`GET` requests only)
+
 ## Command-Line Examples
 
 ### List  
@@ -82,6 +88,11 @@ rpda status --group TestGroup_CG
 Enable Direct Image Access Mode for the **_Test_ Copy** on **_ALL_** Consistency Groups
 ```
 rpda enable --all --test
+```
+
+Enable Direct Image Access Mode for the **_Test_ Copy** on **_ALL_** Consistency Groups with `30` second delay
+```
+rpda enable --all --test --delay 30
 ```
 
 Enable Direct Image Access Mode for the **_Test_ Copy** on Consistency Group `TestGroup_CG`
@@ -110,6 +121,11 @@ Finish Direct Image Access Mode on **_ALL_** Consistency Groups for **_Test_ Cop
 rpda finish --all --test
 ```
 
+Finish Direct Image Access Mode on **_ALL_** Consistency Groups for **_Test_ Copy** with `60` second delay
+```
+rpda finish --all --test --delay 60
+```
+
 Finish Direct Image Access Mode on Consistency Group `TestGroup_CG` for **_Test_ Copy**
 ```
 rpda finish --group TestGroup_CG --test
@@ -129,11 +145,6 @@ Finish Direct Image Access Mode on Consistency Group `TestGroup_CG` for **_User 
 ```
 rpda finish --group TestGroup_CG --copy Example_CN
 ```
-
-## Additional Flags
-
-- `--debug`: will print various important variables and run various debugging functions
-- `--check`: will run allow the application to execute _without_ making any changes (readonly mode)
 
 ## Project Dependencies/Libraries
 The following libraries were used in the creation of this project:  
