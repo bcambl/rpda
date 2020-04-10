@@ -40,7 +40,7 @@ EXAMPLE_CONSISTENCY_GROUP_CG:
 ```
 
 Please reference the above example with the default `identifiers` section in the configuration.  
-This utility relies upon the use of (_regexp_)[https://golang.org/pkg/regexp/] to determine the desired copy.
+This utility relies upon the use of [_regexp_](https://golang.org/pkg/regexp/) to determine the desired copy.
 
 ## User Permissions
 An account on the RecoverPoint Appliance is required and the user must have access to administrate desired consistency groups.
