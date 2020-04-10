@@ -348,6 +348,7 @@ func (a *App) EnableAll() {
 			time.Sleep(3 * time.Second) // wait a few seconds for platform
 			a.directAccess(t)
 		}
+		time.Sleep(time.Duration(a.Config.Delay) * time.Second)
 	}
 }
 
@@ -394,6 +395,7 @@ func (a *App) FinishAll() {
 			time.Sleep(3 * time.Second) // wait a few seconds for platform
 			a.startTransfer(t)
 		}
+		time.Sleep(time.Duration(a.Config.Delay) * time.Second)
 	}
 }
 

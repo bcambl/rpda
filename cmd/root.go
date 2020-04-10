@@ -49,6 +49,7 @@ var (
 	cfgFile   string
 	debugFlag bool
 	checkFlag bool
+	delayFlag int
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -106,6 +107,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.rpda.yaml)")
 	rootCmd.PersistentFlags().BoolVar(&checkFlag, "check", false, "enable check mode (no changes will be made)")
 	rootCmd.PersistentFlags().BoolVar(&debugFlag, "debug", false, "enable debug mode")
+	rootCmd.PersistentFlags().IntVar(&delayFlag, "delay", 0, "Seconds to wait between API calls which emable Direct Access")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -168,6 +170,7 @@ func initConfig() {
 	// add check and debug flags to viper
 	viper.Set("check", checkFlag)
 	viper.Set("debug", debugFlag)
+	viper.Set("api.delay", delayFlag)
 
 	if debugFlag {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
