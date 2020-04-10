@@ -52,8 +52,8 @@ As mentioned above, if the consistency groups being managed have a consistent na
 
 One of the following _copy flags_ must be provided:
  - `--copy <copy_name>` to specify copy name
- - `--test` to use the lest _test_ copy based on `test_node_regexp` regular expression within the configuration file
- - `--dr` to use the lest _test_ copy based on `copy_node_regexp` regular expression within the configuration file
+ - `--test` to use the latest _test_ copy based on `test_node_regexp` regular expression within the configuration file
+ - `--dr` to use the latest _test_ copy based on `copy_node_regexp` regular expression within the configuration file
 
  Note:  
  - only one of the above flags can be provided at once.
