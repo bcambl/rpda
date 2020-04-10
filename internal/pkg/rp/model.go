@@ -14,7 +14,7 @@ type App struct {
 	Identifiers *Identifiers   `json:"identifiers"`
 }
 
-// Config contains configurations for the application
+// Config contains various API configurations for the application
 type Config struct {
 	RPAURL    string `json:"rpa_url"`
 	Username  string `json:"username"`
@@ -24,7 +24,7 @@ type Config struct {
 	Debug     bool   `json:"-"`
 }
 
-// Identifiers describe the prefix/suffix strings for use in a 'contains' query
+// Identifiers describe the regular expression strings for use in copy name validations
 type Identifiers struct {
 	ProductionNodeRegexp *regexp.Regexp `json:"production_node_regexp"`
 	CopyNodeRegexp       *regexp.Regexp `json:"copy_node_regexp"`
@@ -71,7 +71,7 @@ type GroupUID struct {
 	ID int `json:"id"`
 }
 
-// GroupName to marchal response from /fapi/rest/5_1/groups/{id}/name/
+// GroupName to marshal response from /fapi/rest/5_1/groups/{id}/name/
 type GroupName struct {
 	String string `json:"string"`
 }
@@ -83,7 +83,7 @@ type GroupCopiesSettings struct {
 	RoleInfo RoleInfo `json:"roleInfo"`
 }
 
-// CopyUID is used by GroupCopiesSettings for copyIUD within groupCopiesSettings
+// CopyUID is used by GroupCopiesSettings for copyUID within groupCopiesSettings
 type CopyUID struct {
 	GroupUID      GroupUID      `json:"groupUID"`
 	GlobalCopyUID GlobalCopyUID `json:"globalCopyUID"`
