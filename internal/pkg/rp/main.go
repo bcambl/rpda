@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Load will populate the application config
+// Load will populate the application config based on the configuration file & cli flags
 func (c *Config) Load(cmd *cobra.Command) *Config {
 	c.RPAURL = viper.GetString("api.url")
 	c.Username = viper.GetString("api.username")
@@ -29,7 +29,7 @@ func (c *Config) Load(cmd *cobra.Command) *Config {
 	return c
 }
 
-// Load will populate the application config
+// Load will compile the application copy regular expression identifiers
 func (i *Identifiers) Load(cmd *cobra.Command) *Identifiers {
 	i.ProductionNodeRegexp = regexp.MustCompile(viper.GetString("identifiers.production_node_regexp"))
 	i.CopyNodeRegexp = regexp.MustCompile(viper.GetString("identifiers.copy_node_regexp"))
@@ -37,7 +37,7 @@ func (i *Identifiers) Load(cmd *cobra.Command) *Identifiers {
 	return i
 }
 
-// Debugger will dump the
+// Debugger will print various variables and settings to stdout and run any auxilary debug functions
 func (a *App) Debugger() {
 
 	fmt.Println("DEBUG ENABLED")
@@ -90,6 +90,7 @@ func (a *App) apiRequest(method, url string, data io.Reader) ([]byte, int) {
 	return body, resp.StatusCode
 }
 
+// getUserGroups retrieves the groups of which the current user has rights to administer
 func (a *App) getUserGroups() []GroupUID {
 	endpoint := a.Config.RPAURL + "/fapi/rest/5_1/users/settings/"
 	body, _ := a.apiRequest("GET", endpoint, nil)
@@ -105,7 +106,8 @@ func (a *App) getUserGroups() []GroupUID {
 	return allowedGroups
 }
 
-func (a *App) userHasGrouAdmin(groupID int, usersGroups []GroupUID) bool {
+// groupInGroups returns true if a group UID exists in a slice of GroupUID
+func (a *App) groupInGroups(groupID int, usersGroups []GroupUID) bool {
 	var permission bool
 	if usersGroups == nil {
 		usersGroups = a.getUserGroups()
@@ -218,7 +220,7 @@ func (a *App) DisplayGroup(groupName string) {
 // getRequestedCopy attempts to determine the desired copy based on identifier prefixes and flags
 func (a *App) getRequestedCopy(gcs []GroupCopiesSettings) GroupCopiesSettings {
 	var c GroupCopiesSettings
-	for _, cs := range gcs { // iterate over all copies
+	for _, cs := range gcs {
 		// always skip the production node
 		if a.Identifiers.ProductionNodeRegexp.MatchString(cs.Name) {
 			continue
@@ -246,6 +248,7 @@ func (a *App) getRequestedCopy(gcs []GroupCopiesSettings) GroupCopiesSettings {
 			c = cs
 		}
 	}
+	// when the struct is empty, provide user with valid copies for the consistency group
 	if c == (GroupCopiesSettings{}) {
 		log.Error("Unable to determine the desired copy to enable direct image access mode")
 		if a.CopyName != "" {
@@ -273,6 +276,7 @@ func (a *App) startTransfer(t Task) {
 	if !a.Config.CheckMode {
 		_, statusCode := a.apiRequest("PUT", endpoint, nil)
 		if statusCode != 204 {
+			log.Errorf("Expected status code '204' and received: %d\n", statusCode)
 			log.Fatalf("Error Starting Transfer for Group %s Copy %s\n", t.GroupName, t.CopyName)
 		}
 	}
@@ -300,6 +304,7 @@ func (a *App) imageAccess(t Task) {
 	if !a.Config.CheckMode {
 		_, statusCode := a.apiRequest("PUT", endpoint, bytes.NewBuffer(json))
 		if statusCode != 204 {
+			log.Errorf("Expected status code '204' and received: %d\n", statusCode)
 			log.Fatalf("Error enabling Latest Image for Group %s Copy %s\n", t.GroupName, t.CopyName)
 		}
 	}
@@ -317,6 +322,7 @@ func (a *App) directAccess(t Task) {
 	if !a.Config.CheckMode {
 		_, statusCode := a.apiRequest("PUT", endpoint, nil)
 		if statusCode != 204 {
+			log.Errorf("Expected status code '204' and received: %d\n", statusCode)
 			log.Fatalf("Error enabling Direct Access for Group %s Copy %s\n", t.GroupName, t.CopyName)
 		}
 	}
@@ -349,7 +355,7 @@ func (a *App) EnableAll() {
 func (a *App) EnableOne() {
 	groupID := a.getGroupIDByName(a.Group)
 	usersGroups := a.getUserGroups()
-	if a.userHasGrouAdmin(groupID, usersGroups) == false {
+	if a.groupInGroups(groupID, usersGroups) == false {
 		log.Error("User does not have sufficient access to administer ", a.Group)
 		return
 	}
@@ -395,7 +401,7 @@ func (a *App) FinishAll() {
 func (a *App) FinishOne() {
 	groupID := a.getGroupIDByName(a.Group)
 	usersGroups := a.getUserGroups()
-	if a.userHasGrouAdmin(groupID, usersGroups) == false {
+	if a.groupInGroups(groupID, usersGroups) == false {
 		log.Error("User does not have sufficient access to administer ", a.Group)
 		return
 	}
