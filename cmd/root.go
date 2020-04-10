@@ -134,12 +134,15 @@ func initConfig() {
 
 	viper.AutomaticEnv() // read in environment variables that match
 
+	defaultURL := "https://recoverpoint_fqdn/"
+	defaultUsername := "username"
+
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 
 			// Define placeholder configuration values for API
-			viper.Set("api.url", "https://recoverpoint_fqdn/")
-			viper.Set("api.username", "username")
+			viper.Set("api.url", defaultURL)
+			viper.Set("api.username", defaultUsername)
 			viper.Set("api.delay", 0)
 			// Define placeholder copy identifiers
 			viper.Set("identifiers.production_node_regexp", "_PN$")
@@ -155,18 +158,24 @@ func initConfig() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			fmt.Println("New configuration created. Please Update: ", newConfig)
+			log.Info("New configuration created. Please Update: ", newConfig)
 			os.Exit(0)
 		} else {
 			log.Fatal(err)
 		}
 	}
+
 	// add check and debug flags to viper
 	viper.Set("check", checkFlag)
 	viper.Set("debug", debugFlag)
 
 	if debugFlag {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
+	}
+
+	// test for default url & username
+	if viper.Get("api.url") == defaultURL || viper.Get("api.username") == defaultUsername {
+		log.Println("Sample configuration detected. Please Update: ", viper.ConfigFileUsed())
 	}
 
 	// prompt for password if not saved
