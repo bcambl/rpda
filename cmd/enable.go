@@ -32,10 +32,9 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 
 import (
-	"fmt"
 	"os"
 
-	"github.com/bcambl/rpda/internal/pkg/rp"
+	"github.com/bcambl/rpda/internal/pkg/rpa"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/cobra"
@@ -62,14 +61,14 @@ rpda enable --all --dr
 	Run: func(cmd *cobra.Command, args []string) {
 
 		// Load API Configuration
-		c := &rp.Config{}
-		c.Load(cmd)
+		c := &rpa.Config{}
+		c.Load()
 
 		// Load Consistency Group Name Identifiers
-		i := &rp.Identifiers{}
-		i.Load(cmd)
+		i := &rpa.Identifiers{}
+		i.Load()
 
-		a := &rp.App{}
+		a := &rpa.App{}
 		a.Config = c
 		a.Identifiers = i
 
@@ -94,14 +93,11 @@ rpda enable --all --dr
 			log.Fatal(err)
 		}
 
-		if a.Config.Debug {
-			a.Debugger()
-			fmt.Println("enable command 'group' flag value: ", group)
-			fmt.Println("enable command 'copy' flag value: ", copyByName)
-			fmt.Println("enable command 'test' flag value: ", testCopy)
-			fmt.Println("enable command 'dr' flag value: ", drCopy)
-			fmt.Println("enable command 'all' flag value: ", all)
-		}
+		log.Debug("enable command 'group' flag value: ", group)
+		log.Debug("enable command 'copy' flag value: ", copyByName)
+		log.Debug("enable command 'test' flag value: ", testCopy)
+		log.Debug("enable command 'dr' flag value: ", drCopy)
+		log.Debug("enable command 'all' flag value: ", all)
 
 		// preflight checks
 

@@ -1,4 +1,4 @@
-package rp
+package rpa
 
 import (
 	"bytes"
@@ -10,51 +10,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"regexp"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
-
-// Load will populate the application config based on the configuration file & cli flags
-func (c *Config) Load(cmd *cobra.Command) *Config {
-	c.RPAURL = viper.GetString("api.url")
-	c.Username = viper.GetString("api.username")
-	c.Password = viper.GetString("api.password")
-	c.Delay = viper.GetInt("api.delay")
-	c.CheckMode = viper.GetBool("check")
-	c.Debug = viper.GetBool("debug")
-	return c
-}
-
-// Load will compile the application copy regular expression identifiers
-func (i *Identifiers) Load(cmd *cobra.Command) *Identifiers {
-	i.ProductionNodeRegexp = regexp.MustCompile(viper.GetString("identifiers.production_node_regexp"))
-	i.CopyNodeRegexp = regexp.MustCompile(viper.GetString("identifiers.copy_node_regexp"))
-	i.TestNodeRegexp = regexp.MustCompile(viper.GetString("identifiers.test_node_regexp"))
-	return i
-}
-
-// Debugger will print various variables and settings to stdout and run any auxilary debug functions
-func (a *App) Debugger() {
-
-	fmt.Println("DEBUG ENABLED")
-	// print out App struct fields
-	fmt.Println("RPA URL: ", a.Config.RPAURL)
-	fmt.Println("Username: ", a.Config.Username)
-	fmt.Println("Password: ", a.Config.Password)
-	fmt.Println("Group: ", a.Group)
-	fmt.Println("CopyName: ", a.CopyName)
-	fmt.Println("Delay: ", a.Config.Delay)
-	fmt.Println("CheckMode: ", a.Config.CheckMode)
-	fmt.Println("Debug: ", a.Config.Debug)
-	fmt.Println("Identifiers:")
-	fmt.Println("  Production Node Regexp: ", a.Identifiers.ProductionNodeRegexp.String())
-	fmt.Println("  Copy Node Regexp: ", a.Identifiers.CopyNodeRegexp.String())
-	fmt.Println("  Test Copy Regexp: ", a.Identifiers.TestNodeRegexp.String())
-}
 
 func basicAuth(username, password string) string {
 	userPass := username + ":" + password
@@ -87,6 +47,13 @@ func (a *App) apiRequest(method, url string, data io.Reader) ([]byte, int) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	log.WithFields(log.Fields{
+		"method":     method,
+		"statusCode": strconv.Itoa(resp.StatusCode),
+		"body":       string(body),
+	}).Debug(url)
+
 	return body, resp.StatusCode
 }
 
