@@ -139,6 +139,10 @@ func initConfig() {
 	defaultURL := "https://recoverpoint_fqdn/"
 	defaultUsername := "username"
 
+	if debugFlag {
+		log.SetLevel(log.DebugLevel)
+	}
+
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 
@@ -167,18 +171,16 @@ func initConfig() {
 		}
 	}
 
+	log.Debug("Using config file:", viper.ConfigFileUsed())
+
 	// add check and debug flags to viper
 	viper.Set("check", checkFlag)
 	viper.Set("debug", debugFlag)
 	viper.Set("api.delay", delayFlag)
 
-	if debugFlag {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-	}
-
 	// test for default url & username
 	if viper.Get("api.url") == defaultURL || viper.Get("api.username") == defaultUsername {
-		log.Println("Sample configuration detected. Please Update: ", viper.ConfigFileUsed())
+		log.Fatal("Sample configuration detected. Please Update: ", viper.ConfigFileUsed())
 	}
 
 	// prompt for password if not saved
@@ -189,7 +191,7 @@ func passwordPrompt() {
 	// password _can_ be saved to the config file; however, prompt by default.
 	// consider this a hidden feature as passwords should not be stored in in plain text.
 	if viper.Get("api.password") == nil {
-		fmt.Printf("provide password for %s: ", viper.Get("api.username"))
+		fmt.Printf("provide password for user '%s' : ", viper.Get("api.username"))
 
 		p, err := terminal.ReadPassword(int(syscall.Stdin))
 		if err != nil {

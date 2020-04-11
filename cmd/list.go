@@ -32,7 +32,7 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 
 import (
-	"github.com/bcambl/rpda/internal/pkg/rp"
+	"github.com/bcambl/rpda/internal/pkg/rpa"
 	"github.com/spf13/cobra"
 )
 
@@ -49,15 +49,11 @@ rpda list
 	Run: func(cmd *cobra.Command, args []string) {
 
 		// Load API Configuration
-		c := &rp.Config{}
-		c.Load(cmd)
+		c := &rpa.Config{}
+		c.Load()
 
-		a := &rp.App{}
+		a := &rpa.App{}
 		a.Config = c
-
-		if a.Config.Debug {
-			a.Debugger()
-		}
 
 		a.ListGroups()
 	},

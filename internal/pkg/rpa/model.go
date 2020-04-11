@@ -1,4 +1,4 @@
-package rp
+package rpa
 
 import "regexp"
 

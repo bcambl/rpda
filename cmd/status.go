@@ -32,11 +32,9 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 
 import (
-	"fmt"
-
+	"github.com/bcambl/rpda/internal/pkg/rpa"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bcambl/rpda/internal/pkg/rp"
 	"github.com/spf13/cobra"
 )
 
@@ -55,14 +53,14 @@ rpda status --group Example_CG
 	Run: func(cmd *cobra.Command, args []string) {
 
 		// Load API Configuration
-		c := &rp.Config{}
-		c.Load(cmd)
+		c := &rpa.Config{}
+		c.Load()
 
 		// Load Consistency Group Name Identifiers
-		i := &rp.Identifiers{}
-		i.Load(cmd)
+		i := &rpa.Identifiers{}
+		i.Load()
 
-		a := &rp.App{}
+		a := &rpa.App{}
 		a.Config = c
 		a.Identifiers = i
 
@@ -75,11 +73,8 @@ rpda status --group Example_CG
 			log.Fatal(err)
 		}
 
-		if a.Config.Debug {
-			a.Debugger()
-			fmt.Println("status command 'group' flag value: ", group)
-			fmt.Println("status command 'all' flag value: ", all)
-		}
+		log.Debug("status command 'group' flag value: ", group)
+		log.Debug("status command 'all' flag value: ", all)
 
 		if group != "" {
 			// display status of single group if a group name was provided
