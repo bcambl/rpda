@@ -23,35 +23,36 @@ identifiers:
 ```
 
 Update the configuration file with variables that suit your site or environment.  
-Ensure the `identifiers` section within the configuration file is updated as these values are used
-to identify the copies by name within the consistency groups.
+The `identifiers` section in the configuration file uses [_regexp_](https://golang.org/pkg/regexp/) to determine the desired copy
+for when `--test` or `--dr` are used.
+
+The following example will work with the default `identifiers` section in the configuration example above.
 
 ```
 EXAMPLE_CONSISTENCY_GROUP_CG:
 
-             PRODUCTION_NODE_PN          <-- Production instance
+             PRODUCTION_NODE_PN          <-- Production/Protection node
                 /        \
                /          \
               /            \
              /              \
-            /        TC_TESTING_COPY_CN  <-- copy for testing or long term direct access
+            /        TC_TESTING_COPY_CN  <-- copy node for testing or long term direct access
            /
-       COPY_NODE_CN  <---------------------- un-interupted copy for disaster recovery 
+       COPY_NODE_CN  <---------------------- un-interupted copy node for disaster recovery
 ```
 
-Please reference the above example with the default `identifiers` section in the configuration.  
-This utility relies upon the use of [_regexp_](https://golang.org/pkg/regexp/) to determine the desired copy.
+
 
 ## User Permissions
 An account on the RecoverPoint Appliance is required and the user must have access to administrate desired consistency groups.
 When issuing the `--all` option will only administer consistency groups of which the account has access to modify as per RecoverPoint user privledges.
 
 ## Specifying a Copy
-As mentioned above, if the consistency groups being managed have a consistent naming structure, you can configure the
-`identifiers` with appropriate regular expressions within the configuration file (default location: `$HOME/.rpda.yaml`).
+Naming consistency groups using a consistent _naming scheme_ will allow the use of `--test` and `--dr` options by
+configuring the `identifiers` section with regular expressions to suite your environment. _(see configuration section above)_
 
 One of the following _copy flags_ must be provided:
- - `--copy <copy_name>` to specify copy name
+ - `--copy <copy_name>` to specify copy name to enable direct access
  - `--test` to use the latest _test_ copy based on `test_node_regexp` regular expression within the configuration file
  - `--dr` to use the latest _test_ copy based on `copy_node_regexp` regular expression within the configuration file
 
@@ -145,15 +146,6 @@ Finish Direct Image Access Mode on Consistency Group `TestGroup_CG` for **_User 
 ```
 rpda finish --group TestGroup_CG --copy Example_CN
 ```
-
-## Project Dependencies/Libraries
-The following libraries were used in the creation of this project:  
-
--	`github.com/mitchellh/go-homedir`-> home directory discovery
--	`github.com/sirupsen/logrus`     -> enhanced logging output
--	`github.com/spf13/cobra`         -> standard cli framework
--	`github.com/spf13/viper`         -> configuration file management
--	`golang.org/x/crypto`            -> password prompt
 
 ## Build Instructions
 
