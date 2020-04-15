@@ -174,7 +174,7 @@ func initConfig() {
 		}
 	}
 
-	log.Debug("Using config file:", viper.ConfigFileUsed())
+	fmt.Println("Using config file: ", viper.ConfigFileUsed())
 
 	// add check and debug flags to viper
 	viper.Set("check", checkFlag)
