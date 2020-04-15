@@ -46,10 +46,12 @@ import (
 )
 
 var (
-	cfgFile   string
-	debugFlag bool
-	checkFlag bool
-	delayFlag int
+	cfgFile    string
+	userName   string
+	promptPass bool
+	debugFlag  bool
+	checkFlag  bool
+	delayFlag  int
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -104,6 +106,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	// Global application flags
+	rootCmd.PersistentFlags().StringVar(&userName, "user", "", "specify username")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.rpda.yaml)")
 	rootCmd.PersistentFlags().BoolVar(&checkFlag, "check", false, "enable check mode (no changes will be made)")
 	rootCmd.PersistentFlags().BoolVar(&debugFlag, "debug", false, "enable debug mode")
@@ -183,6 +186,13 @@ func initConfig() {
 		log.Fatal("Sample configuration detected. Please Update: ", viper.ConfigFileUsed())
 	}
 
+	// override username if provided
+	if userName != "" {
+		viper.Set("api.username", userName)
+		// force a password prompt
+		promptPass = true
+	}
+
 	// prompt for password if not saved
 	passwordPrompt()
 }
@@ -190,7 +200,7 @@ func initConfig() {
 func passwordPrompt() {
 	// password _can_ be saved to the config file; however, prompt by default.
 	// consider this a hidden feature as passwords should not be stored in in plain text.
-	if viper.Get("api.password") == nil {
+	if viper.Get("api.password") == nil || promptPass == true {
 		fmt.Printf("provide password for user '%s' : ", viper.Get("api.username"))
 
 		p, err := terminal.ReadPassword(int(syscall.Stdin))

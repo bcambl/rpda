@@ -62,6 +62,7 @@ One of the following _copy flags_ must be provided:
 
 ## Additional Flags
 
+- `--user <username>` will override the `username` specified within the configuration file.
 - `--delay 60`: will introduce a delay of `60` seconds between consistency group changes when using `--all` (default: `0`)
 - `--debug`: will produce additional debugging output to assist with troubleshooting & development
 - `--check`: will run allow the application to execute _without_ making any changes (`GET` requests only)
