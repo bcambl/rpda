@@ -1,13 +1,13 @@
 rpda
 ====
-is a RecoverPoint Direct Access utility to enable _direct access_ to the latest image on a copy node
-within a consistency group remotely via API. 
+Is a RecoverPoint Direct Access utility to provide clients a simple CLI to manage _direct access_ testing
+on the latest image of a copy node within a consistency group remotely via API.
 The project is written in Go (golang) and can be compiled to a single binary for ease of deployment.
 
-Download latest compiled `x86_64` release binary [here](https://github.com/bcambl/rpda/releases)
+Download latest compiled `x86_64` release binary [here](https://github.com/bcambl/rpda/releases/latest)
 
 ## Configuration
-A configuration template will be generated upon first execution of `rpda`. 
+A configuration template will be generated upon first execution of `rpda [command]`.
 
 ```
 api:
@@ -23,8 +23,8 @@ identifiers:
 ```
 
 Update the configuration file with variables that suit your site or environment.  
-The `identifiers` section in the configuration file uses [_regexp_](https://golang.org/pkg/regexp/) to determine the desired copy
-for when `--test` or `--dr` are used.
+The `identifiers` section in the configuration file uses [_regexp_](https://golang.org/pkg/regexp/) to
+determine the desired copy for when `--test` or `--dr` are used.
 
 The following example will work with the default `identifiers` section in the configuration example above.
 
@@ -45,7 +45,8 @@ EXAMPLE_CONSISTENCY_GROUP_CG:
 
 ## User Permissions
 An account on the RecoverPoint Appliance is required and the user must have access to administrate desired consistency groups.
-When issuing the `--all` option will only administer consistency groups of which the account has access to modify as per RecoverPoint user privledges.
+This utility will only administer consistency groups of which the account has access to modify as per RecoverPoint user
+privledges when `--all` is used.
 
 ## Specifying a Copy
 Naming consistency groups using a consistent _naming scheme_ will allow the use of `--test` and `--dr` options by
@@ -62,10 +63,17 @@ One of the following _copy flags_ must be provided:
 
 ## Additional Flags
 
-- `--user <username>` will override the `username` specified within the configuration file.
+- `--user <username>` will override the `username` specified within the configuration file. _(will prompt for password)_
 - `--delay 60`: will introduce a delay of `60` seconds between consistency group changes when using `--all` (default: `0`)
 - `--debug`: will produce additional debugging output to assist with troubleshooting & development
 - `--check`: will run allow the application to execute _without_ making any changes (`GET` requests only)
+- `--help`: will display CLI help and examples
+
+  Note:  
+  Each _command_ also has its own `--help`  
+  ```
+  rpda enable --help
+  ```
 
 ## Command-Line Examples
 
@@ -92,7 +100,7 @@ Enable Direct Image Access Mode for the **_Test_ Copy** on **_ALL_** Consistency
 rpda enable --all --test
 ```
 
-Enable Direct Image Access Mode for the **_Test_ Copy** on **_ALL_** Consistency Groups with `30` second delay
+Enable Direct Image Access Mode for the **_Test_ Copy** on **_ALL_** Consistency Groups with `30` second **delay**
 ```
 rpda enable --all --test --delay 30
 ```
@@ -112,7 +120,7 @@ Enable Direct Image Access Mode for the **_DR_ Copy** on Consistency Group `Test
 rpda enable --group TestGroup_CG --dr
 ```
 
-Enable Direct Image Access Mode for a **_User Defined Copy_** (_Example_CN_) on Consistency Group `TestGroup_CG`
+Enable Direct Image Access Mode for a **_User Defined Copy_** (`_Example_CN_`) on Consistency Group `TestGroup_CG`
 ```
 rpda enable --group TestGroup_CG --copy Example_CN
 ```
@@ -143,14 +151,14 @@ Finish Direct Image Access Mode on Consistency Group `TestGroup_CG` for **_DR_ C
 rpda finish --group TestGroup_CG --dr
 ```
 
-Finish Direct Image Access Mode on Consistency Group `TestGroup_CG` for **_User Defined Copy_** (_Example_CN_)
+Finish Direct Image Access Mode on Consistency Group `TestGroup_CG` for **_User Defined Copy_** (`_Example_CN_`)
 ```
 rpda finish --group TestGroup_CG --copy Example_CN
 ```
 
 ## Build Instructions
 
-Download latest compiled `x86_64/amd64` release binary [here](https://github.com/bcambl/rpda/releases)
+Download latest compiled `x86_64/amd64` release binary [here](https://github.com/bcambl/rpda/releases/latest)
 
 If you would like to compile the project from source, please install the latest version of the
 Go programming [here](https://golang.org/dl/).
@@ -165,4 +173,4 @@ Build Project for `x86_64/amd64` Windows
 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o rpda.exe main.go
 ```
 
-Please read more about building the project for other platforms ($GOOS and $GOARCH) [here](https://golang.org/doc/install/source#environment).
+Please read more about building the project for other platforms (`$GOOS` and `$GOARCH`) [here](https://golang.org/doc/install/source#environment).
