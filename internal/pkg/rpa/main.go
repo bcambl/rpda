@@ -75,16 +75,15 @@ func (a *App) getUserGroups() []GroupUID {
 
 // groupInGroups returns true if a group UID exists in a slice of GroupUID
 func (a *App) groupInGroups(groupID int, usersGroups []GroupUID) bool {
-	var permission bool
 	if usersGroups == nil {
 		usersGroups = a.getUserGroups()
 	}
 	for _, g := range usersGroups {
 		if g.ID == groupID {
-			permission = true
+			return true
 		}
 	}
-	return permission
+	return false
 }
 
 func (a *App) getAllGroups() []GroupUID {
