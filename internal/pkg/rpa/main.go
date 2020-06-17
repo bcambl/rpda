@@ -303,6 +303,11 @@ func (a *App) EnableAll() {
 		GroupName := a.getGroupName(g.ID)
 		groupCopiesSettings := a.getGroupCopiesSettings(g.ID)
 		copySettings := a.getRequestedCopy(groupCopiesSettings)
+		// skip if copy is already 'enabled'
+		if copySettings.RoleInfo.Role == "ACTIVE" {
+			fmt.Printf("Image Access already enabled for %s -> %s\n", a.Group, copySettings.Name)
+			return
+		}
 		t.GroupName = GroupName
 		t.GroupUID = copySettings.CopyUID.GroupUID.ID
 		t.ClusterUID = copySettings.CopyUID.GlobalCopyUID.ClusterUID.ID
@@ -329,6 +334,11 @@ func (a *App) EnableOne() {
 	var t Task
 	groupCopiesSettings := a.getGroupCopiesSettings(groupID)
 	copySettings := a.getRequestedCopy(groupCopiesSettings)
+	// skip if copy is already 'enabled'
+	if copySettings.RoleInfo.Role == "ACTIVE" {
+		fmt.Printf("Image Access already enabled for %s -> %s\n", a.Group, copySettings.Name)
+		return
+	}
 	t.GroupName = a.Group
 	t.GroupUID = copySettings.CopyUID.GroupUID.ID
 	t.ClusterUID = copySettings.CopyUID.GlobalCopyUID.ClusterUID.ID
