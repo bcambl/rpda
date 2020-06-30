@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -55,35 +56,6 @@ func (a *App) apiRequest(method, url string, data io.Reader) ([]byte, int) {
 	}).Debug(url)
 
 	return body, resp.StatusCode
-}
-
-// getUserGroups retrieves the groups of which the current user has rights to administer
-func (a *App) getUserGroups() []GroupUID {
-	endpoint := a.Config.RPAURL + "/fapi/rest/5_1/users/settings/"
-	body, _ := a.apiRequest("GET", endpoint, nil)
-	var usr UsersSettingsResponse
-	json.Unmarshal(body, &usr)
-
-	var allowedGroups []GroupUID
-	for _, u := range usr.Users {
-		if u.Name == a.Config.Username {
-			allowedGroups = u.Groups
-		}
-	}
-	return allowedGroups
-}
-
-// groupInGroups returns true if a group UID exists in a slice of GroupUID
-func (a *App) groupInGroups(groupID int, usersGroups []GroupUID) bool {
-	if usersGroups == nil {
-		usersGroups = a.getUserGroups()
-	}
-	for _, g := range usersGroups {
-		if g.ID == groupID {
-			return true
-		}
-	}
-	return false
 }
 
 func (a *App) getAllGroups() []GroupUID {
@@ -249,7 +221,7 @@ func (a *App) startTransfer(t Task) {
 	fmt.Printf("Starting Transfer for Group %s Copy %s\n", t.GroupName, t.CopyName)
 }
 
-func (a *App) imageAccess(t Task) {
+func (a *App) imageAccess(t Task) error {
 	operationName := "Disabling"
 	operation := "disable_image_access"
 	if t.Enable == true {
@@ -270,13 +242,14 @@ func (a *App) imageAccess(t Task) {
 	}
 
 	if !a.Config.CheckMode {
-		_, statusCode := a.apiRequest("PUT", endpoint, bytes.NewBuffer(json))
+		body, statusCode := a.apiRequest("PUT", endpoint, bytes.NewBuffer(json))
 		if statusCode != 204 {
-			log.Errorf("Expected status code '204' and received: %d\n", statusCode)
-			log.Fatalf("Error %s Latest Image for Group %s Copy %s\n", operationName, t.GroupName, t.CopyName)
+			log.Debugf("Expected status code '204' and received: %d\n", statusCode)
+			return errors.New(string(body))
 		}
 	}
 	fmt.Printf("%s Latest Image for Group %s Copy %s\n", operationName, t.GroupName, t.CopyName)
+	return nil
 }
 
 func (a *App) pollImageAccessEnabled(groupID int, stateDesired bool) {
@@ -320,7 +293,7 @@ func (a *App) directAccess(t Task) {
 
 // EnableAll wraper for enabling Direct Image Access for all CG
 func (a *App) EnableAll() {
-	groups := a.getUserGroups() // only groups user has permission to admin
+	groups := a.getAllGroups() // only groups user has permission to admin
 	for _, g := range groups {
 		var t Task
 		GroupName := a.getGroupName(g.ID)
@@ -338,7 +311,11 @@ func (a *App) EnableAll() {
 		t.CopyUID = copySettings.CopyUID.GlobalCopyUID.CopyUID
 		t.Enable = true // whether to enable or disable the following tasks
 		if !a.Config.CheckMode {
-			a.imageAccess(t)
+			err := a.imageAccess(t)
+			if err != nil {
+				log.Warnf("%s %s\n", GroupName, err)
+				continue
+			}
 			a.pollImageAccessEnabled(g.ID, true)
 			a.directAccess(t)
 		}
@@ -349,11 +326,6 @@ func (a *App) EnableAll() {
 // EnableOne wraper for enabling Direct Image Access for a single CG
 func (a *App) EnableOne() {
 	groupID := a.getGroupIDByName(a.Group)
-	usersGroups := a.getUserGroups()
-	if a.groupInGroups(groupID, usersGroups) == false {
-		log.Error("User does not have sufficient access to administer ", a.Group)
-		return
-	}
 	var t Task
 	groupCopiesSettings := a.getGroupCopiesSettings(groupID)
 	copySettings := a.getRequestedCopy(groupCopiesSettings)
@@ -369,7 +341,11 @@ func (a *App) EnableOne() {
 	t.CopyUID = copySettings.CopyUID.GlobalCopyUID.CopyUID
 	t.Enable = true // whether to enable or disable the following tasks
 	if !a.Config.CheckMode {
-		a.imageAccess(t)
+		err := a.imageAccess(t)
+		if err != nil {
+			log.Warnf("%s %s\n", a.Group, err)
+			return
+		}
 		a.pollImageAccessEnabled(groupID, true)
 		a.directAccess(t)
 	}
@@ -377,7 +353,7 @@ func (a *App) EnableOne() {
 
 // FinishAll wraper for finishing Direct Image Access for all CG
 func (a *App) FinishAll() {
-	groups := a.getUserGroups() // only groups user has permission to admin
+	groups := a.getAllGroups() // only groups user has permission to admin
 	for _, g := range groups {
 		var t Task
 		GroupName := a.getGroupName(g.ID)
@@ -390,7 +366,11 @@ func (a *App) FinishAll() {
 		t.CopyUID = copySettings.CopyUID.GlobalCopyUID.CopyUID
 		t.Enable = false // whether to enable or disable the following tasks
 		if !a.Config.CheckMode {
-			a.imageAccess(t)
+			err := a.imageAccess(t)
+			if err != nil {
+				log.Warnf("%s %s\n", GroupName, err)
+				continue
+			}
 			a.pollImageAccessEnabled(g.ID, false)
 			a.startTransfer(t)
 		}
@@ -401,11 +381,6 @@ func (a *App) FinishAll() {
 // FinishOne wraper for finishing Direct Image Access for a single CG
 func (a *App) FinishOne() {
 	groupID := a.getGroupIDByName(a.Group)
-	usersGroups := a.getUserGroups()
-	if a.groupInGroups(groupID, usersGroups) == false {
-		log.Error("User does not have sufficient access to administer ", a.Group)
-		return
-	}
 	var t Task
 	groupCopiesSettings := a.getGroupCopiesSettings(groupID)
 	copySettings := a.getRequestedCopy(groupCopiesSettings)
@@ -416,7 +391,11 @@ func (a *App) FinishOne() {
 	t.CopyUID = copySettings.CopyUID.GlobalCopyUID.CopyUID
 	t.Enable = false // whether to enable or disable the following tasks
 	if !a.Config.CheckMode {
-		a.imageAccess(t)
+		err := a.imageAccess(t)
+		if err != nil {
+			log.Warnf("%s %s\n", a.Group, err)
+			return
+		}
 		a.pollImageAccessEnabled(groupID, false)
 		a.startTransfer(t)
 	}
