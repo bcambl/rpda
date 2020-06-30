@@ -78,9 +78,10 @@ type GroupName struct {
 
 // GroupCopiesSettings is used by GroupSettingsResponse for groupCopiesSettings
 type GroupCopiesSettings struct {
-	Name     string   `json:"name"`
-	CopyUID  CopyUID  `json:"copyUID"`
-	RoleInfo RoleInfo `json:"roleInfo"`
+	Name                   string                 `json:"name"`
+	CopyUID                CopyUID                `json:"copyUID"`
+	RoleInfo               RoleInfo               `json:"roleInfo"`
+	ImageAccessInformation ImageAccessInformation `json:"imageAccessInformation"`
 }
 
 // CopyUID is used by GroupCopiesSettings for copyUID within groupCopiesSettings
@@ -98,6 +99,11 @@ type GlobalCopyUID struct {
 // ClusterUID is the same as GroupUID but keeping seperate for clarity and/or if api data expands
 type ClusterUID struct {
 	ID int `json:"id"`
+}
+
+// ImageAccessInformation holds the boolean imageAccessEnabled within groupCopiesSettings
+type ImageAccessInformation struct {
+	ImageAccessEnabled bool `json:"imageAccessEnabled"`
 }
 
 // RoleInfo holds the 'ACTIVE/REPLICA' json string roleInfo within groupCopiesSettings

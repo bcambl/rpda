@@ -250,8 +250,10 @@ func (a *App) startTransfer(t Task) {
 }
 
 func (a *App) imageAccess(t Task) {
+	operationName := "Disabling"
 	operation := "disable_image_access"
 	if t.Enable == true {
+		operationName = "Enabling"
 		operation = "image_access/latest/enable"
 	}
 	endpoint := fmt.Sprintf(
@@ -271,15 +273,36 @@ func (a *App) imageAccess(t Task) {
 		_, statusCode := a.apiRequest("PUT", endpoint, bytes.NewBuffer(json))
 		if statusCode != 204 {
 			log.Errorf("Expected status code '204' and received: %d\n", statusCode)
-			log.Fatalf("Error enabling Latest Image for Group %s Copy %s\n", t.GroupName, t.CopyName)
+			log.Fatalf("Error %s Latest Image for Group %s Copy %s\n", operationName, t.GroupName, t.CopyName)
 		}
 	}
-	fmt.Printf("Enabling Latest Image for Group %s Copy %s\n", t.GroupName, t.CopyName)
+	fmt.Printf("%s Latest Image for Group %s Copy %s\n", operationName, t.GroupName, t.CopyName)
+}
+
+func (a *App) pollImageAccessEnabled(groupID int, stateDesired bool) {
+	pollDelay := 3 // seconds
+	pollCount := 0 // iteration counter
+	pollMax := 60  // max times to poll before breaking the poll loop
+	fmt.Println("waiting for image access to update..")
+	groupCopiesSettings := a.getGroupCopiesSettings(groupID)
+	copySettings := a.getRequestedCopy(groupCopiesSettings)
+	for copySettings.ImageAccessInformation.ImageAccessEnabled != stateDesired {
+		time.Sleep(time.Duration(pollDelay) * time.Second)
+		groupCopiesSettings = a.getGroupCopiesSettings(groupID)
+		copySettings = a.getRequestedCopy(groupCopiesSettings)
+		if pollCount > pollMax {
+			fmt.Println("Maximum poll count reached while waiting for image access")
+			break
+		}
+		pollCount++
+	}
 }
 
 func (a *App) directAccess(t Task) {
+	operationName := "Disabling"
 	operation := "disable_direct_access"
 	if t.Enable == true {
+		operationName = "Enabling"
 		operation = "enable_direct_access"
 	}
 	endpoint := fmt.Sprintf(
@@ -292,7 +315,7 @@ func (a *App) directAccess(t Task) {
 			log.Fatalf("Error enabling Direct Access for Group %s Copy %s\n", t.GroupName, t.CopyName)
 		}
 	}
-	fmt.Printf("Enabling Direct Access for Group %s Copy %s\n", t.GroupName, t.CopyName)
+	fmt.Printf("%s Direct Access for Group %s Copy %s\n", operationName, t.GroupName, t.CopyName)
 }
 
 // EnableAll wraper for enabling Direct Image Access for all CG
@@ -316,7 +339,7 @@ func (a *App) EnableAll() {
 		t.Enable = true // whether to enable or disable the following tasks
 		if !a.Config.CheckMode {
 			a.imageAccess(t)
-			time.Sleep(3 * time.Second) // wait a few seconds for platform
+			a.pollImageAccessEnabled(g.ID, true)
 			a.directAccess(t)
 		}
 		time.Sleep(time.Duration(a.Config.Delay) * time.Second)
@@ -347,7 +370,7 @@ func (a *App) EnableOne() {
 	t.Enable = true // whether to enable or disable the following tasks
 	if !a.Config.CheckMode {
 		a.imageAccess(t)
-		time.Sleep(3 * time.Second) // wait a few seconds for platform
+		a.pollImageAccessEnabled(groupID, true)
 		a.directAccess(t)
 	}
 }
@@ -368,7 +391,7 @@ func (a *App) FinishAll() {
 		t.Enable = false // whether to enable or disable the following tasks
 		if !a.Config.CheckMode {
 			a.imageAccess(t)
-			time.Sleep(3 * time.Second) // wait a few seconds for platform
+			a.pollImageAccessEnabled(g.ID, false)
 			a.startTransfer(t)
 		}
 		time.Sleep(time.Duration(a.Config.Delay) * time.Second)
@@ -394,7 +417,7 @@ func (a *App) FinishOne() {
 	t.Enable = false // whether to enable or disable the following tasks
 	if !a.Config.CheckMode {
 		a.imageAccess(t)
-		time.Sleep(3 * time.Second) // wait a few seconds for platform
+		a.pollImageAccessEnabled(groupID, false)
 		a.startTransfer(t)
 	}
 }

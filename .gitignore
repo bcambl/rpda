@@ -4,3 +4,5 @@ rpda
 # site settings
 .rpda.yaml
 
+# local development files
+.local
