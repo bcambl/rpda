@@ -302,7 +302,7 @@ func (a *App) EnableAll() {
 		// skip if copy is already 'enabled'
 		if copySettings.RoleInfo.Role == "ACTIVE" {
 			fmt.Printf("Image Access already enabled for %s -> %s\n", a.Group, copySettings.Name)
-			return
+			continue
 		}
 		t.GroupName = GroupName
 		t.GroupUID = copySettings.CopyUID.GroupUID.ID
