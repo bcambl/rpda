@@ -103,7 +103,13 @@ type ClusterUID struct {
 
 // ImageAccessInformation holds the boolean imageAccessEnabled within groupCopiesSettings
 type ImageAccessInformation struct {
-	ImageAccessEnabled bool `json:"imageAccessEnabled"`
+	ImageAccessEnabled bool             `json:"imageAccessEnabled"`
+	ImageInformation   ImageInformation `json:"imageInformation"`
+}
+
+// ImageInformation holds the image information found within ImageAccessInformation
+type ImageInformation struct {
+	Mode string `json:"mode"`
 }
 
 // RoleInfo holds the 'ACTIVE/REPLICA' json string roleInfo within groupCopiesSettings

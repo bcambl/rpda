@@ -11,7 +11,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -49,11 +48,11 @@ func (a *App) apiRequest(method, url string, data io.Reader) ([]byte, int) {
 		log.Fatal(err)
 	}
 
-	log.WithFields(log.Fields{
-		"method":     method,
-		"statusCode": strconv.Itoa(resp.StatusCode),
-		"body":       string(body),
-	}).Debug(url)
+	// log.WithFields(log.Fields{
+	// 	"method":     method,
+	// 	"statusCode": strconv.Itoa(resp.StatusCode),
+	// 	"body":       string(body),
+	// }).Debug(url)
 
 	return body, resp.StatusCode
 }
@@ -262,6 +261,8 @@ func (a *App) pollImageAccessEnabled(groupID int, stateDesired bool) {
 	groupCopiesSettings := a.getGroupCopiesSettings(groupID)
 	copySettings := a.getRequestedCopy(groupCopiesSettings)
 	for copySettings.ImageAccessInformation.ImageAccessEnabled != stateDesired {
+		log.Debug("current image access enabled: ", copySettings.ImageAccessInformation.ImageAccessEnabled)
+		log.Debug("current image logged access mode: ", copySettings.ImageAccessInformation.ImageInformation.Mode)
 		time.Sleep(time.Duration(pollDelay) * time.Second)
 		groupCopiesSettings = a.getGroupCopiesSettings(groupID)
 		copySettings = a.getRequestedCopy(groupCopiesSettings)
@@ -271,6 +272,24 @@ func (a *App) pollImageAccessEnabled(groupID int, stateDesired bool) {
 		}
 		pollCount++
 	}
+	if stateDesired == true {
+		// if the desired state is to have image access == true, we should also
+		// ensure that logged access is also set before continuing.
+		for copySettings.ImageAccessInformation.ImageInformation.Mode != "LOGGED_ACCESS" {
+			log.Debug("current image access enabled: ", copySettings.ImageAccessInformation.ImageAccessEnabled)
+			log.Debug("current image logged access mode: ", copySettings.ImageAccessInformation.ImageInformation.Mode)
+			time.Sleep(time.Duration(pollDelay) * time.Second)
+			groupCopiesSettings = a.getGroupCopiesSettings(groupID)
+			copySettings = a.getRequestedCopy(groupCopiesSettings)
+			if pollCount > pollMax {
+				fmt.Println("Maximum poll count reached while waiting for logged access")
+				break
+			}
+			pollCount++
+		}
+	}
+	log.Debug("current image access enabled: ", copySettings.ImageAccessInformation.ImageAccessEnabled)
+	log.Debug("current image logged access mode: ", copySettings.ImageAccessInformation.ImageInformation.Mode)
 }
 
 func (a *App) directAccess(t Task) error {
