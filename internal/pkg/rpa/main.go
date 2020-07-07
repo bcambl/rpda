@@ -207,18 +207,20 @@ func (a *App) getRequestedCopy(gcs []GroupCopiesSettings) GroupCopiesSettings {
 	return c
 }
 
-func (a *App) startTransfer(t Task) {
+func (a *App) startTransfer(t Task) error {
 	endpoint := fmt.Sprintf(
 		a.Config.RPAURL+"/fapi/rest/5_1/groups/%d/clusters/%d/copies/%d/start_transfer",
 		t.GroupUID, t.ClusterUID, t.CopyUID)
 	if !a.Config.CheckMode {
-		_, statusCode := a.apiRequest("PUT", endpoint, nil)
+		body, statusCode := a.apiRequest("PUT", endpoint, nil)
 		if statusCode != 204 {
-			log.Errorf("Expected status code '204' and received: %d\n", statusCode)
-			log.Fatalf("Error Starting Transfer for Group %s Copy %s\n", t.GroupName, t.CopyName)
+			log.Debugf("Expected status code '204' and received: %d\n", statusCode)
+			log.Warnf("Error Starting Transfer for Group %s Copy %s\n", t.GroupName, t.CopyName)
+			return errors.New(string(body))
 		}
 	}
 	fmt.Printf("Starting Transfer for Group %s Copy %s\n", t.GroupName, t.CopyName)
+	return nil
 }
 
 func (a *App) imageAccess(t Task) error {
@@ -271,7 +273,7 @@ func (a *App) pollImageAccessEnabled(groupID int, stateDesired bool) {
 	}
 }
 
-func (a *App) directAccess(t Task) {
+func (a *App) directAccess(t Task) error {
 	operationName := "Disabling"
 	operation := "disable_direct_access"
 	if t.Enable == true {
@@ -282,13 +284,15 @@ func (a *App) directAccess(t Task) {
 		a.Config.RPAURL+"/fapi/rest/5_1/groups/%d/clusters/%d/copies/%d/%s",
 		t.GroupUID, t.ClusterUID, t.CopyUID, operation)
 	if !a.Config.CheckMode {
-		_, statusCode := a.apiRequest("PUT", endpoint, nil)
+		body, statusCode := a.apiRequest("PUT", endpoint, nil)
 		if statusCode != 204 {
-			log.Errorf("Expected status code '204' and received: %d\n", statusCode)
-			log.Fatalf("Error enabling Direct Access for Group %s Copy %s\n", t.GroupName, t.CopyName)
+			log.Debugf("Expected status code '204' and received: %d\n", statusCode)
+			log.Warnf("Error enabling Direct Access for Group %s Copy %s\n", t.GroupName, t.CopyName)
+			return errors.New(string(body))
 		}
 	}
 	fmt.Printf("%s Direct Access for Group %s Copy %s\n", operationName, t.GroupName, t.CopyName)
+	return nil
 }
 
 // EnableAll wraper for enabling Direct Image Access for all CG
@@ -317,7 +321,11 @@ func (a *App) EnableAll() {
 				continue
 			}
 			a.pollImageAccessEnabled(g.ID, true)
-			a.directAccess(t)
+			err = a.directAccess(t)
+			if err != nil {
+				log.Warnf("%s %s\n", GroupName, err)
+				continue
+			}
 		}
 		time.Sleep(time.Duration(a.Config.Delay) * time.Second)
 	}
@@ -347,7 +355,10 @@ func (a *App) EnableOne() {
 			return
 		}
 		a.pollImageAccessEnabled(groupID, true)
-		a.directAccess(t)
+		err = a.directAccess(t)
+		if err != nil {
+			log.Warnf("%s %s\n", a.Group, err)
+		}
 	}
 }
 
@@ -369,10 +380,15 @@ func (a *App) FinishAll() {
 			err := a.imageAccess(t)
 			if err != nil {
 				log.Warnf("%s %s\n", GroupName, err)
+				// continue as we cannot start transfer when image access does
+				// not update as expected.
 				continue
 			}
 			a.pollImageAccessEnabled(g.ID, false)
-			a.startTransfer(t)
+			err = a.startTransfer(t)
+			if err != nil {
+				log.Warnf("%s %s\n", GroupName, err)
+			}
 		}
 		time.Sleep(time.Duration(a.Config.Delay) * time.Second)
 	}
@@ -397,6 +413,9 @@ func (a *App) FinishOne() {
 			return
 		}
 		a.pollImageAccessEnabled(groupID, false)
-		a.startTransfer(t)
+		err = a.startTransfer(t)
+		if err != nil {
+			log.Warnf("%s %s\n", a.Group, err)
+		}
 	}
 }
