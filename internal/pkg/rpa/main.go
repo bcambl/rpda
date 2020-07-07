@@ -293,6 +293,11 @@ func (a *App) pollImageAccessEnabled(groupID int, stateDesired bool) {
 }
 
 func (a *App) directAccess(t Task) error {
+
+	pollDelay := 10 // seconds
+	pollCount := 0  // iteration counter
+	pollMax := 30   // max times to poll before breaking the poll loop
+
 	operationName := "Disabling"
 	operation := "disable_direct_access"
 	if t.Enable == true {
@@ -304,10 +309,16 @@ func (a *App) directAccess(t Task) error {
 		t.GroupUID, t.ClusterUID, t.CopyUID, operation)
 	if !a.Config.CheckMode {
 		body, statusCode := a.apiRequest("PUT", endpoint, nil)
-		if statusCode != 204 {
+		for statusCode != 204 {
 			log.Debugf("Expected status code '204' and received: %d\n", statusCode)
-			log.Warnf("Error enabling Direct Access for Group %s Copy %s\n", t.GroupName, t.CopyName)
-			return errors.New(string(body))
+			time.Sleep(time.Duration(pollDelay) * time.Second)
+			body, statusCode = a.apiRequest("PUT", endpoint, nil)
+			if pollCount > pollMax {
+				fmt.Println("Maximum poll count reached while waiting for direct access")
+				log.Warnf("Error %s Direct Access for Group %s Copy %s\n", operationName, t.GroupName, t.CopyName)
+				return errors.New(string(body))
+			}
+			pollCount++
 		}
 	}
 	fmt.Printf("%s Direct Access for Group %s Copy %s\n", operationName, t.GroupName, t.CopyName)
