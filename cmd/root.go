@@ -119,8 +119,8 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	// skip config setup when caller simply wants to display the license
-	if os.Args[1] == "license" {
+	// skip config setup when caller simply wants to display the license or version
+	if os.Args[1] == "license" || os.Args[1] == "version" {
 		return
 	}
 
