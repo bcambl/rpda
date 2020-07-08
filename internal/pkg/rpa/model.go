@@ -20,6 +20,8 @@ type Config struct {
 	Username  string `json:"username"`
 	Password  string `json:"password"`
 	Delay     int    `json:"delay"`
+	PollDelay int    `json:"polldelay"`
+	PollMax   int    `json:"pollmax"`
 	CheckMode bool   `json:"-"`
 	Debug     bool   `json:"-"`
 }

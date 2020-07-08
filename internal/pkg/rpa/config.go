@@ -13,6 +13,8 @@ func (c *Config) Load() *Config {
 	c.Username = viper.GetString("api.username")
 	c.Password = viper.GetString("api.password")
 	c.Delay = viper.GetInt("api.delay")
+	c.PollDelay = viper.GetInt("api.polldelay")
+	c.PollMax = viper.GetInt("api.pollmax")
 	c.CheckMode = viper.GetBool("check")
 	c.Debug = viper.GetBool("debug")
 
@@ -21,6 +23,8 @@ func (c *Config) Load() *Config {
 		"Username":  c.Username,
 		"Password":  "REDACTED",
 		"Delay":     c.Delay,
+		"PollDelay": c.PollDelay,
+		"PollMax":   c.PollMax,
 		"CheckMode": c.CheckMode,
 		"Debug":     c.Debug,
 	}).Debug("Config struct variable assignments")

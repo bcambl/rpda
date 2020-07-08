@@ -254,15 +254,16 @@ func (a *App) imageAccess(t Task) error {
 }
 
 func (a *App) pollImageAccessEnabled(groupID int, stateDesired bool) {
-	pollDelay := 3 // seconds
-	pollCount := 0 // iteration counter
-	pollMax := 60  // max times to poll before breaking the poll loop
+	pollDelay := a.Config.PollDelay // seconds
+	pollMax := a.Config.PollMax     // max times to poll before breaking the poll loop
+	pollCount := 0                  // iteration counter
+
 	fmt.Println("waiting for image access to update..")
 	groupCopiesSettings := a.getGroupCopiesSettings(groupID)
 	copySettings := a.getRequestedCopy(groupCopiesSettings)
 	for copySettings.ImageAccessInformation.ImageAccessEnabled != stateDesired {
-		log.Debug("current image access enabled: ", copySettings.ImageAccessInformation.ImageAccessEnabled)
-		log.Debug("current image logged access mode: ", copySettings.ImageAccessInformation.ImageInformation.Mode)
+		log.Debug("polling - image access enabled: ", copySettings.ImageAccessInformation.ImageAccessEnabled)
+		log.Debug("polling - image logged access mode: ", copySettings.ImageAccessInformation.ImageInformation.Mode)
 		time.Sleep(time.Duration(pollDelay) * time.Second)
 		groupCopiesSettings = a.getGroupCopiesSettings(groupID)
 		copySettings = a.getRequestedCopy(groupCopiesSettings)
@@ -273,11 +274,11 @@ func (a *App) pollImageAccessEnabled(groupID int, stateDesired bool) {
 		pollCount++
 	}
 	if stateDesired == true {
-		// if the desired state is to have image access == true, we should also
-		// ensure that logged access is also set before continuing.
+		// if the desired state is to have image access == true, we should ensure that logged access is also
+		// set before continuing. This seems to take a few seconds longer.. so we will continue polling for mode.
 		for copySettings.ImageAccessInformation.ImageInformation.Mode != "LOGGED_ACCESS" {
-			log.Debug("current image access enabled: ", copySettings.ImageAccessInformation.ImageAccessEnabled)
-			log.Debug("current image logged access mode: ", copySettings.ImageAccessInformation.ImageInformation.Mode)
+			log.Debug("polling image access enabled: ", copySettings.ImageAccessInformation.ImageAccessEnabled)
+			log.Debug("polling image logged access mode: ", copySettings.ImageAccessInformation.ImageInformation.Mode)
 			time.Sleep(time.Duration(pollDelay) * time.Second)
 			groupCopiesSettings = a.getGroupCopiesSettings(groupID)
 			copySettings = a.getRequestedCopy(groupCopiesSettings)
@@ -288,15 +289,14 @@ func (a *App) pollImageAccessEnabled(groupID int, stateDesired bool) {
 			pollCount++
 		}
 	}
-	log.Debug("current image access enabled: ", copySettings.ImageAccessInformation.ImageAccessEnabled)
-	log.Debug("current image logged access mode: ", copySettings.ImageAccessInformation.ImageInformation.Mode)
+	log.Debug("polling complete - current image access enabled: ", copySettings.ImageAccessInformation.ImageAccessEnabled)
+	log.Debug("polling complete - current image logged access mode: ", copySettings.ImageAccessInformation.ImageInformation.Mode)
 }
 
 func (a *App) directAccess(t Task) error {
-
-	pollDelay := 10 // seconds
-	pollCount := 0  // iteration counter
-	pollMax := 30   // max times to poll before breaking the poll loop
+	pollDelay := a.Config.PollDelay // seconds
+	pollMax := a.Config.PollMax     // max times to poll before breaking the poll loop
+	pollCount := 0                  // iteration counter
 
 	operationName := "Disabling"
 	operation := "disable_direct_access"

@@ -46,12 +46,14 @@ import (
 )
 
 var (
-	cfgFile    string
-	userName   string
-	promptPass bool
-	debugFlag  bool
-	checkFlag  bool
-	delayFlag  int
+	cfgFile       string
+	userName      string
+	promptPass    bool
+	debugFlag     bool
+	checkFlag     bool
+	delayFlag     int
+	pollDelayFlag int
+	pollMaxFlag   int
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -110,7 +112,9 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.rpda.yaml)")
 	rootCmd.PersistentFlags().BoolVar(&checkFlag, "check", false, "enable check mode (no changes will be made)")
 	rootCmd.PersistentFlags().BoolVar(&debugFlag, "debug", false, "enable debug mode")
-	rootCmd.PersistentFlags().IntVar(&delayFlag, "delay", 0, "Seconds to wait between API calls which emable Direct Access")
+	rootCmd.PersistentFlags().IntVar(&delayFlag, "delay", 0, "Seconds to wait between Consistency Groups with --all")
+	rootCmd.PersistentFlags().IntVar(&pollDelayFlag, "polldelay", 3, "Seconds to wait between API status polling requests")
+	rootCmd.PersistentFlags().IntVar(&pollMaxFlag, "pollmax", 30, "Number of status poll attempts with before failing")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -153,6 +157,8 @@ func initConfig() {
 			viper.Set("api.url", defaultURL)
 			viper.Set("api.username", defaultUsername)
 			viper.Set("api.delay", 0)
+			viper.Set("api.polldelay", 3)
+			viper.Set("api.pollmax", 30)
 			// Define placeholder copy identifiers
 			viper.Set("identifiers.production_node_regexp", "_PN$")
 			viper.Set("identifiers.copy_node_regexp", "_CN$")
@@ -180,6 +186,8 @@ func initConfig() {
 	viper.Set("check", checkFlag)
 	viper.Set("debug", debugFlag)
 	viper.Set("api.delay", delayFlag)
+	viper.Set("api.polldelay", pollDelayFlag)
+	viper.Set("api.pollmax", pollDelayFlag)
 
 	// test for default url & username
 	if viper.Get("api.url") == defaultURL || viper.Get("api.username") == defaultUsername {
