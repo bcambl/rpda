@@ -119,6 +119,11 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+	// skip config setup when caller simply wants to display the license
+	if os.Args[1] == "license" {
+		return
+	}
+
 	if cfgFile != "" {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
