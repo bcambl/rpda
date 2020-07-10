@@ -214,19 +214,19 @@ func (a *App) startTransfer(t Task) error {
 		body, statusCode := a.apiRequest("PUT", endpoint, nil)
 		if statusCode != 204 {
 			log.Debugf("Expected status code '204' and received: %d\n", statusCode)
-			log.Warnf("Error Starting Transfer for Group %s Copy %s\n", t.GroupName, t.CopyName)
+			log.Warnf("%s - Error Starting Transfer for Copy %s\n", t.GroupName, t.CopyName)
 			return errors.New(string(body))
 		}
 	}
-	fmt.Printf("Starting Transfer for Group %s Copy %s\n", t.GroupName, t.CopyName)
+	fmt.Printf("%s - Starting Transfer for Copy %s\n", t.GroupName, t.CopyName)
 	return nil
 }
 
 func (a *App) imageAccess(t Task) error {
-	operationName := "Disabling"
+	operationName := "Disabled"
 	operation := "disable_image_access"
 	if t.Enable == true {
-		operationName = "Enabling"
+		operationName = "Enabled"
 		operation = "image_access/latest/enable"
 	}
 	endpoint := fmt.Sprintf(
@@ -249,41 +249,40 @@ func (a *App) imageAccess(t Task) error {
 			return errors.New(string(body))
 		}
 	}
-	fmt.Printf("%s Latest Image for Group %s Copy %s\n", operationName, t.GroupName, t.CopyName)
+	fmt.Printf("%s - %s Latest Image for Group Copy %s\n", t.GroupName, operationName, t.CopyName)
 	return nil
 }
 
-func (a *App) pollImageAccessEnabled(groupID int, stateDesired bool) {
+func (a *App) pollImageAccessEnabled(groupID int, groupName string, stateDesired bool) {
 	pollDelay := a.Config.PollDelay // seconds
 	pollMax := a.Config.PollMax     // max times to poll before breaking the poll loop
 	pollCount := 0                  // iteration counter
 
-	fmt.Println("waiting for image access to update..")
+	fmt.Printf("%s - Waiting for image access to update..\n", groupName)
 	groupCopiesSettings := a.getGroupCopiesSettings(groupID)
 	copySettings := a.getRequestedCopy(groupCopiesSettings)
 	for copySettings.ImageAccessInformation.ImageAccessEnabled != stateDesired {
 		log.Debug("polling - image access enabled: ", copySettings.ImageAccessInformation.ImageAccessEnabled)
-		log.Debug("polling - image logged access mode: ", copySettings.ImageAccessInformation.ImageInformation.Mode)
 		time.Sleep(time.Duration(pollDelay) * time.Second)
 		groupCopiesSettings = a.getGroupCopiesSettings(groupID)
 		copySettings = a.getRequestedCopy(groupCopiesSettings)
 		if pollCount > pollMax {
-			fmt.Println("Maximum poll count reached while waiting for image access")
+			fmt.Println("Maximum poll count reached while waiting for image access. Consider increasing 'pollmax' in configuration")
 			break
 		}
 		pollCount++
 	}
+	pollCount = 0 // reset counter before polling for logged access
 	if stateDesired == true {
 		// if the desired state is to have image access == true, we should ensure that logged access is also
 		// set before continuing. This seems to take a few seconds longer.. so we will continue polling for mode.
 		for copySettings.ImageAccessInformation.ImageInformation.Mode != "LOGGED_ACCESS" {
-			log.Debug("polling image access enabled: ", copySettings.ImageAccessInformation.ImageAccessEnabled)
 			log.Debug("polling image logged access mode: ", copySettings.ImageAccessInformation.ImageInformation.Mode)
 			time.Sleep(time.Duration(pollDelay) * time.Second)
 			groupCopiesSettings = a.getGroupCopiesSettings(groupID)
 			copySettings = a.getRequestedCopy(groupCopiesSettings)
 			if pollCount > pollMax {
-				fmt.Println("Maximum poll count reached while waiting for logged access")
+				fmt.Println("Maximum poll count reached while waiting for logged access. Consider increasing 'pollmax' in configuration")
 				break
 			}
 			pollCount++
@@ -298,10 +297,10 @@ func (a *App) directAccess(t Task) error {
 	pollMax := a.Config.PollMax     // max times to poll before breaking the poll loop
 	pollCount := 0                  // iteration counter
 
-	operationName := "Disabling"
+	operationName := "Disabl" // suffix is appended based on message
 	operation := "disable_direct_access"
 	if t.Enable == true {
-		operationName = "Enabling"
+		operationName = "Enabl" // suffix is appended based on message
 		operation = "enable_direct_access"
 	}
 	endpoint := fmt.Sprintf(
@@ -314,14 +313,14 @@ func (a *App) directAccess(t Task) error {
 			time.Sleep(time.Duration(pollDelay) * time.Second)
 			body, statusCode = a.apiRequest("PUT", endpoint, nil)
 			if pollCount > pollMax {
-				fmt.Println("Maximum poll count reached while waiting for direct access")
-				log.Warnf("Error %s Direct Access for Group %s Copy %s\n", operationName, t.GroupName, t.CopyName)
+				log.Warnf("%s - Maximum poll count reached while waiting for direct access\n", t.GroupName)
+				log.Warnf("%s - Error %sing Direct Access for Copy %s\n", t.GroupName, operationName, t.CopyName)
 				return errors.New(string(body))
 			}
 			pollCount++
 		}
 	}
-	fmt.Printf("%s Direct Access for Group %s Copy %s\n", operationName, t.GroupName, t.CopyName)
+	fmt.Printf("%s - %sed Direct Access for Copy %s\n", t.GroupName, operationName, t.CopyName)
 	return nil
 }
 
@@ -331,15 +330,15 @@ func (a *App) EnableAll() {
 	groups := a.getAllGroups()
 	for _, g := range groups {
 		var t Task
-		GroupName := a.getGroupName(g.ID)
+		groupName := a.getGroupName(g.ID)
 		groupCopiesSettings := a.getGroupCopiesSettings(g.ID)
 		copySettings := a.getRequestedCopy(groupCopiesSettings)
 		// skip if copy is already 'enabled'
 		if copySettings.RoleInfo.Role == "ACTIVE" {
-			fmt.Printf("Image Access already enabled for %s -> %s\n", a.Group, copySettings.Name)
+			fmt.Printf("%s - Image Access already enabled for copy: %s\n", a.Group, copySettings.Name)
 			continue
 		}
-		t.GroupName = GroupName
+		t.GroupName = groupName
 		t.GroupUID = copySettings.CopyUID.GroupUID.ID
 		t.ClusterUID = copySettings.CopyUID.GlobalCopyUID.ClusterUID.ID
 		t.CopyName = copySettings.Name
@@ -348,13 +347,13 @@ func (a *App) EnableAll() {
 		if !a.Config.CheckMode {
 			err := a.imageAccess(t)
 			if err != nil {
-				log.Warnf("%s %s\n", GroupName, err)
+				log.Warnf("%s - %s\n", groupName, err)
 				continue
 			}
-			a.pollImageAccessEnabled(g.ID, true)
+			a.pollImageAccessEnabled(g.ID, groupName, true)
 			err = a.directAccess(t)
 			if err != nil {
-				log.Warnf("%s %s\n", GroupName, err)
+				log.Warnf("%s - %s\n", groupName, err)
 				continue
 			}
 		}
@@ -373,7 +372,7 @@ func (a *App) EnableOne() {
 	copySettings := a.getRequestedCopy(groupCopiesSettings)
 	// skip if copy is already 'enabled'
 	if copySettings.RoleInfo.Role == "ACTIVE" {
-		fmt.Printf("Image Access already enabled for %s -> %s\n", a.Group, copySettings.Name)
+		fmt.Printf("%s - Image Access already enabled for copy: %s\n", a.Group, copySettings.Name)
 		return
 	}
 	t.GroupName = a.Group
@@ -385,13 +384,13 @@ func (a *App) EnableOne() {
 	if !a.Config.CheckMode {
 		err := a.imageAccess(t)
 		if err != nil {
-			log.Warnf("%s %s\n", a.Group, err)
+			log.Warnf("%s - %s\n", a.Group, err)
 			return
 		}
-		a.pollImageAccessEnabled(groupID, true)
+		a.pollImageAccessEnabled(groupID, a.Group, true)
 		err = a.directAccess(t)
 		if err != nil {
-			log.Warnf("%s %s\n", a.Group, err)
+			log.Warnf("%s - %s\n", a.Group, err)
 		}
 	}
 	elapsed := time.Since(start)
@@ -404,10 +403,10 @@ func (a *App) FinishAll() {
 	groups := a.getAllGroups()
 	for _, g := range groups {
 		var t Task
-		GroupName := a.getGroupName(g.ID)
+		groupName := a.getGroupName(g.ID)
 		groupCopiesSettings := a.getGroupCopiesSettings(g.ID)
 		copySettings := a.getRequestedCopy(groupCopiesSettings)
-		t.GroupName = GroupName
+		t.GroupName = groupName
 		t.GroupUID = copySettings.CopyUID.GroupUID.ID
 		t.ClusterUID = copySettings.CopyUID.GlobalCopyUID.ClusterUID.ID
 		t.CopyName = copySettings.Name
@@ -416,15 +415,15 @@ func (a *App) FinishAll() {
 		if !a.Config.CheckMode {
 			err := a.imageAccess(t)
 			if err != nil {
-				log.Warnf("%s %s\n", GroupName, err)
+				log.Warnf("%s - %s\n", groupName, err)
 				// continue as we cannot start transfer when image access does
 				// not update as expected.
 				continue
 			}
-			a.pollImageAccessEnabled(g.ID, false)
+			a.pollImageAccessEnabled(g.ID, groupName, false)
 			err = a.startTransfer(t)
 			if err != nil {
-				log.Warnf("%s %s\n", GroupName, err)
+				log.Warnf("%s - %s\n", groupName, err)
 			}
 		}
 		time.Sleep(time.Duration(a.Config.Delay) * time.Second)
@@ -449,13 +448,13 @@ func (a *App) FinishOne() {
 	if !a.Config.CheckMode {
 		err := a.imageAccess(t)
 		if err != nil {
-			log.Warnf("%s %s\n", a.Group, err)
+			log.Warnf("%s - %s\n", a.Group, err)
 			return
 		}
-		a.pollImageAccessEnabled(groupID, false)
+		a.pollImageAccessEnabled(groupID, a.Group, false)
 		err = a.startTransfer(t)
 		if err != nil {
-			log.Warnf("%s %s\n", a.Group, err)
+			log.Warnf("%s - %s\n", a.Group, err)
 		}
 	}
 	elapsed := time.Since(start)
