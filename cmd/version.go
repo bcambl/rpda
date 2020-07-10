@@ -48,7 +48,7 @@ rpda version
 
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Current Version: v1.1.6")
+		fmt.Println("Current Version: v1.2.0")
 		fmt.Println("Download Latest Release: https://github.com/bcambl/rpda/releases/latest")
 	},
 }
