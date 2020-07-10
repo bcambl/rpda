@@ -327,7 +327,8 @@ func (a *App) directAccess(t Task) error {
 
 // EnableAll wraper for enabling Direct Image Access for all CG
 func (a *App) EnableAll() {
-	groups := a.getAllGroups() // only groups user has permission to admin
+	start := time.Now()
+	groups := a.getAllGroups()
 	for _, g := range groups {
 		var t Task
 		GroupName := a.getGroupName(g.ID)
@@ -359,10 +360,13 @@ func (a *App) EnableAll() {
 		}
 		time.Sleep(time.Duration(a.Config.Delay) * time.Second)
 	}
+	elapsed := time.Since(start)
+	log.Printf("Done. (took %s)\n", elapsed)
 }
 
 // EnableOne wraper for enabling Direct Image Access for a single CG
 func (a *App) EnableOne() {
+	start := time.Now()
 	groupID := a.getGroupIDByName(a.Group)
 	var t Task
 	groupCopiesSettings := a.getGroupCopiesSettings(groupID)
@@ -390,11 +394,14 @@ func (a *App) EnableOne() {
 			log.Warnf("%s %s\n", a.Group, err)
 		}
 	}
+	elapsed := time.Since(start)
+	log.Printf("Done. (took %s)\n", elapsed)
 }
 
 // FinishAll wraper for finishing Direct Image Access for all CG
 func (a *App) FinishAll() {
-	groups := a.getAllGroups() // only groups user has permission to admin
+	start := time.Now()
+	groups := a.getAllGroups()
 	for _, g := range groups {
 		var t Task
 		GroupName := a.getGroupName(g.ID)
@@ -422,10 +429,13 @@ func (a *App) FinishAll() {
 		}
 		time.Sleep(time.Duration(a.Config.Delay) * time.Second)
 	}
+	elapsed := time.Since(start)
+	log.Printf("Done. (took %s)\n", elapsed)
 }
 
 // FinishOne wraper for finishing Direct Image Access for a single CG
 func (a *App) FinishOne() {
+	start := time.Now()
 	groupID := a.getGroupIDByName(a.Group)
 	var t Task
 	groupCopiesSettings := a.getGroupCopiesSettings(groupID)
@@ -448,4 +458,6 @@ func (a *App) FinishOne() {
 			log.Warnf("%s %s\n", a.Group, err)
 		}
 	}
+	elapsed := time.Since(start)
+	log.Printf("Done. (took %s)\n", elapsed)
 }
