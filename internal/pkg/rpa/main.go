@@ -432,7 +432,7 @@ func (a *App) FinishAll() {
 	log.Printf("Done. (took %s)\n", elapsed)
 }
 
-// FinishOne wraper for finishing Direct Image Access for a single CG
+// FinishOne wrapper for finishing Direct Image Access for a single CG
 func (a *App) FinishOne() {
 	start := time.Now()
 	groupID := a.getGroupIDByName(a.Group)
