@@ -324,7 +324,7 @@ func (a *App) directAccess(t Task) error {
 	return nil
 }
 
-// EnableAll wraper for enabling Direct Image Access for all CG
+// EnableAll wrapper for enabling Direct Image Access for all CG
 func (a *App) EnableAll() {
 	start := time.Now()
 	groups := a.getAllGroups()
@@ -363,7 +363,7 @@ func (a *App) EnableAll() {
 	log.Printf("Done. (took %s)\n", elapsed)
 }
 
-// EnableOne wraper for enabling Direct Image Access for a single CG
+// EnableOne wrapper for enabling Direct Image Access for a single CG
 func (a *App) EnableOne() {
 	start := time.Now()
 	groupID := a.getGroupIDByName(a.Group)
@@ -397,7 +397,7 @@ func (a *App) EnableOne() {
 	log.Printf("Done. (took %s)\n", elapsed)
 }
 
-// FinishAll wraper for finishing Direct Image Access for all CG
+// FinishAll wrapper for finishing Direct Image Access for all CG
 func (a *App) FinishAll() {
 	start := time.Now()
 	groups := a.getAllGroups()
@@ -432,7 +432,7 @@ func (a *App) FinishAll() {
 	log.Printf("Done. (took %s)\n", elapsed)
 }
 
-// FinishOne wraper for finishing Direct Image Access for a single CG
+// FinishOne wrapper for finishing Direct Image Access for a single CG
 func (a *App) FinishOne() {
 	start := time.Now()
 	groupID := a.getGroupIDByName(a.Group)
